@@ -1,3 +1,5 @@
+<a href="https://zerodha.tech"><img src="https://zerodha.tech/static/images/github-badge.svg" align="right" /></a>
+
 # Terraform Provider for Warpgate
 
 This Terraform provider allows you to manage [WarpGate](https://github.com/warp-tech/warpgate) resources through Terraform. Warpgate is a smart SSH and HTTPS bastion that provides secure access to your infrastructure.
