@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/warp-tech/terraform-provider-warpgate/internal/client"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/warp-tech/terraform-provider-warpgate/internal/client"
 )
 
 // New returns a function that creates a new Terraform provider for Warpgate
@@ -33,11 +33,13 @@ func New(version string) func() *schema.Provider {
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
-				"warpgate_role":        resourceRole(),
-				"warpgate_user":        resourceUser(),
-				"warpgate_target":      resourceTarget(),
-				"warpgate_user_role":   resourceUserRole(),
-				"warpgate_target_role": resourceTargetRole(),
+				"warpgate_role":                  resourceRole(),
+				"warpgate_user":                  resourceUser(),
+				"warpgate_target":                resourceTarget(),
+				"warpgate_user_role":             resourceUserRole(),
+				"warpgate_target_role":           resourceTargetRole(),
+				"warpgate_password_credential":   resourcePasswordCredential(),
+				"warpgate_public_key_credential": resourcePublicKeyCredential(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"warpgate_role":   dataSourceRole(),
