@@ -162,6 +162,16 @@ func (c *Client) AddPasswordCredential(ctx context.Context, userID string, passw
 	return &cred, nil
 }
 
+// DeletePasswordCredential removes a password credential from a user.
+func (c *Client) DeletePasswordCredential(ctx context.Context, userID string, credentialID string) error {
+	resp, err := c.doRequest(ctx, http.MethodDelete, fmt.Sprintf("/users/%s/credentials/passwords/%s", userID, credentialID), nil)
+	if err != nil {
+		return err
+	}
+
+	return handleResponse(resp, nil)
+}
+
 // PublicKeyCredential represents a public key credential for a user
 type PublicKeyCredential struct {
 	ID               string `json:"id,omitempty"`
@@ -189,4 +199,49 @@ func (c *Client) AddPublicKeyCredential(ctx context.Context, userID string, labe
 	}
 
 	return &cred, nil
+}
+
+// GetPublicKeyCredentials retrieves all public key credentials for a user.
+func (c *Client) GetPublicKeyCredentials(ctx context.Context, userID string) ([]PublicKeyCredential, error) {
+	resp, err := c.doRequest(ctx, http.MethodGet, fmt.Sprintf("/users/%s/credentials/public-keys", userID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var creds []PublicKeyCredential
+	if err := handleResponse(resp, &creds); err != nil {
+		return nil, err
+	}
+
+	return creds, nil
+}
+
+// UpdatePublicKeyCredential updates an existing public key credential.
+func (c *Client) UpdatePublicKeyCredential(ctx context.Context, userID string, credentialID string, label string, publicKey string) (*PublicKeyCredential, error) {
+	req := &PublicKeyCredential{
+		Label:            label,
+		OpensshPublicKey: publicKey,
+	}
+
+	resp, err := c.doRequest(ctx, http.MethodPut, fmt.Sprintf("/users/%s/credentials/public-keys/%s", userID, credentialID), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var cred PublicKeyCredential
+	if err := handleResponse(resp, &cred); err != nil {
+		return nil, err
+	}
+
+	return &cred, nil
+}
+
+// DeletePublicKeyCredential removes a public key credential from a user.
+func (c *Client) DeletePublicKeyCredential(ctx context.Context, userID string, credentialID string) error {
+	resp, err := c.doRequest(ctx, http.MethodDelete, fmt.Sprintf("/users/%s/credentials/public-keys/%s", userID, credentialID), nil)
+	if err != nil {
+		return err
+	}
+
+	return handleResponse(resp, nil)
 }
