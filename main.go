@@ -5,7 +5,7 @@ import (
 	"log"
 	"runtime/debug"
 
-	"github.com/Thunderbottom/terraform-provider-warpgate/internal/provider"
+	"github.com/warp-tech/terraform-provider-warpgate/internal/provider"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 
@@ -37,7 +37,7 @@ func main() {
 
 	opts := &plugin.ServeOpts{
 		Debug:        debugMode,
-		ProviderAddr: "registry.terraform.io/Thunderbottom/warpgate",
+		ProviderAddr: "registry.terraform.io/warp-tech/warpgate",
 		ProviderFunc: provider.New(version),
 	}
 

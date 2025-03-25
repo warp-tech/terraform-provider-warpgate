@@ -1,4 +1,4 @@
-module github.com/Thunderbottom/terraform-provider-warpgate
+module github.com/warp-tech/terraform-provider-warpgate
 
 go 1.24.1
 

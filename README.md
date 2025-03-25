@@ -1,19 +1,19 @@
 # Terraform Provider for Warpgate
 
-This Terraform provider allows you to manage [WarpGate](https://github.com/Thunderbottom/warpgate) resources through Terraform. Warpgate is a smart SSH and HTTPS bastion that provides secure access to your infrastructure.
+This Terraform provider allows you to manage [WarpGate](https://github.com/warp-tech/warpgate) resources through Terraform. Warpgate is a smart SSH and HTTPS bastion that provides secure access to your infrastructure.
 
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 0.13.x
 - [Go](https://golang.org/doc/install) >= 1.18 (to build the provider)
-- [Warpgate](https://github.com/Thunderbottom/warpgate) >= 0.13.2
+- [Warpgate](https://github.com/warp-tech/warpgate) >= 0.13.2
 
 ## Building the Provider
 
 1. Clone the repository:
 
 ```sh
-git clone https://github.com/Thunderbottom/terraform-provider-warpgate.git
+git clone https://github.com/warp-tech/terraform-provider-warpgate.git
 cd terraform-provider-warpgate
 ```
 
@@ -39,7 +39,7 @@ To use the provider, define it in your Terraform configuration:
 terraform {
   required_providers {
     warpgate = {
-      source  = "registry.terraform.io/Thunderbottom/warpgate"
+      source  = "registry.terraform.io/warp-tech/warpgate"
       version = "~> 1.0.0"
     }
   }

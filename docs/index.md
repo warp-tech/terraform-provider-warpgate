@@ -7,7 +7,7 @@ description: |-
 
 # WarpGate Terraform Provider
 
-The WarpGate provider allows Terraform to manage [WarpGate](https://github.com/Thunderbottom/warpgate) resources. WarpGate is a smart SSH and HTTPS bastion designed to enhance access management for your infrastructure.
+The WarpGate provider allows Terraform to manage [WarpGate](https://github.com/warp-tech/warpgate) resources. WarpGate is a smart SSH and HTTPS bastion designed to enhance access management for your infrastructure.
 
 This provider enables you to manage users, roles, targets (SSH, HTTP, MySQL, PostgreSQL) in WarpGate using Terraform.
 
@@ -17,7 +17,7 @@ This provider enables you to manage users, roles, targets (SSH, HTTP, MySQL, Pos
 terraform {
   required_providers {
     warpgate = {
-      source  = "Thunderbottom/warpgate"
+      source  = "warp-tech/warpgate"
       version = "1.0.0"
     }
   }
