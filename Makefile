@@ -1,7 +1,7 @@
 default: build
 
 # Get the current version from git tags
-VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
+VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "dev")
 
 # Build the provider
 .PHONY: build
@@ -11,8 +11,8 @@ build:
 # Install the provider locally for testing
 .PHONY: install
 install: build
-	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/Thunderbottom/warpgate/$(VERSION)/$(shell go env GOOS)_$(shell go env GOARCH)
-	cp terraform-provider-warpgate ~/.terraform.d/plugins/registry.terraform.io/Thunderbottom/warpgate/$(VERSION)/$(shell go env GOOS)_$(shell go env GOARCH)/
+	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/warp-tech/warpgate/$(VERSION)/$(shell go env GOOS)_$(shell go env GOARCH)
+	cp terraform-provider-warpgate ~/.terraform.d/plugins/registry.terraform.io/warp-tech/warpgate/$(VERSION)/$(shell go env GOOS)_$(shell go env GOARCH)/
 
 # Generate documentation
 .PHONY: docs
