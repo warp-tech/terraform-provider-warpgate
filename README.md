@@ -69,6 +69,8 @@ export WARPGATE_TOKEN="your-api-token"
 - `warpgate_target` - Manage Warpgate targets (SSH, HTTP, MySQL, PostgreSQL)
 - `warpgate_user_role` - Manage role assignments to users
 - `warpgate_target_role` - Manage role assignments to targets
+- `warpgate_password_credential` - Manage password credentials for users
+- `warpgate_public_key_credential` - Manage SSH public key credentials for users
 
 #### Data Sources
 
@@ -91,6 +93,23 @@ resource "warpgate_user" "example" {
     mysql    = ["Password"]
     postgres = ["Password"]
   }
+}
+```
+
+### Adding Credentials to a User
+
+```hcl
+# Add a password credential
+resource "warpgate_password_credential" "eugene_password" {
+  user_id  = warpgate_user.example.id
+  password = var.user_password
+}
+
+# Add an SSH public key credential
+resource "warpgate_public_key_credential" "eugene_ssh_key" {
+  user_id    = warpgate_user.example.id
+  label      = "Work Laptop"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2E... email@example.com"
 }
 ```
 
@@ -239,6 +258,12 @@ terraform import warpgate_user_role.example user-uuid:role-uuid
 
 # Import a target-role association
 terraform import warpgate_target_role.example target-uuid:role-uuid
+
+# Import a password credential
+terraform import warpgate_password_credential.example user-uuid:credential-uuid
+
+# Import a public key credential
+terraform import warpgate_public_key_credential.example user-uuid:credential-uuid
 ```
 
 ## Authentication

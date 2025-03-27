@@ -9,7 +9,7 @@ description: |-
 
 The WarpGate provider allows Terraform to manage [WarpGate](https://github.com/warp-tech/warpgate) resources. WarpGate is a smart SSH and HTTPS bastion designed to enhance access management for your infrastructure.
 
-This provider enables you to manage users, roles, targets (SSH, HTTP, MySQL, PostgreSQL) in WarpGate using Terraform.
+This provider enables you to manage users, roles, targets (SSH, HTTP, MySQL, PostgreSQL), credentials, and access controls in WarpGate using Terraform.
 
 ## Example Usage
 
@@ -42,6 +42,19 @@ resource "warpgate_user" "eugene" {
   credential_policy {
     ssh = ["Password", "PublicKey"]
   }
+}
+
+# Add a password credential to the user
+resource "warpgate_password_credential" "eugene_password" {
+  user_id  = warpgate_user.eugene.id
+  password = var.user_password
+}
+
+# Add a public key credential to the user
+resource "warpgate_public_key_credential" "eugene_key" {
+  user_id    = warpgate_user.eugene.id
+  label      = "Work Laptop"
+  public_key = file("~/.ssh/id_rsa.pub")
 }
 
 # Create an SSH target
