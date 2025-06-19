@@ -15,7 +15,7 @@ Manages a user in WarpGate. Users represent identities that can be authenticated
 resource "warpgate_user" "eugene" {
   username    = "eugene"
   description = "Eugene - Development Lead"
-  
+
   credential_policy {
     ssh      = ["Password", "PublicKey"]
     http     = ["Password", "Totp"]
@@ -27,10 +27,36 @@ resource "warpgate_user" "eugene" {
 resource "warpgate_user" "deploy_bot" {
   username    = "deploy_bot"
   description = "Deployment automation service account"
-  
+
   credential_policy {
     ssh = ["PublicKey"]
   }
+}
+
+# User with SSO authentication
+resource "warpgate_user" "sso_user" {
+  username    = "john.doe"
+  description = "User with SSO authentication"
+
+  credential_policy {
+    http     = ["Sso"]
+    ssh      = ["Sso", "PublicKey"]
+    mysql    = ["Sso"]
+    postgres = ["Sso"]
+  }
+}
+
+# Add SSO credentials to the user
+resource "warpgate_user_sso_credential" "google_sso" {
+  user_id  = warpgate_user.sso_user.id
+  provider = "google"
+  email    = "john.doe@company.com"
+}
+
+resource "warpgate_user_sso_credential" "github_sso" {
+  user_id  = warpgate_user.sso_user.id
+  provider = "github"
+  email    = "john.doe@company.com"
 }
 ```
 
@@ -54,6 +80,39 @@ The `credential_policy` block supports:
 In addition to all arguments above, the following attributes are exported:
 
 * `id` - The ID of the user.
+
+## SSO Integration
+
+When using SSO authentication, users must have corresponding SSO credentials configured. Use the `warpgate_user_sso_credential` resource to manage SSO credentials:
+
+```hcl
+# Create user with SSO requirement
+resource "warpgate_user" "sso_user" {
+  username    = "alice"
+  description = "Alice - SSO authenticated user"
+
+  credential_policy {
+    http = ["Sso"]
+    ssh  = ["Sso", "PublicKey"]  # Allow both SSO and PublicKey for SSH
+  }
+}
+
+# Add Google SSO credential
+resource "warpgate_user_sso_credential" "alice_google" {
+  user_id  = warpgate_user.sso_user.id
+  provider = "google"
+  email    = "alice@company.com"
+}
+```
+
+### Supported SSO Providers
+
+Common SSO providers include:
+- `google` - Google Workspace/OAuth
+- `github` - GitHub OAuth
+- `okta` - Okta SAML/OIDC
+- `azure` - Azure Active Directory
+- Custom SAML/OIDC providers
 
 ## Import
 
@@ -79,12 +138,21 @@ $ terraform import warpgate_user.eugene 12345678-1234-1234-1234-123456789012
 
 - `id` (String) The ID of this resource.
 
-<a id="nestedblock--credential_policy"></a>
+<a id="nestedatt--credential_policy"></a>
 ### Nested Schema for `credential_policy`
 
-Optional:
+Read-Only:
 
 - `http` (List of String)
 - `mysql` (List of String)
 - `postgres` (List of String)
 - `ssh` (List of String)
+
+<a id="nestedatt--sso_credentials"></a>
+### Nested Schema for `sso_credentials`
+
+Read-Only:
+
+- `email` (String) The email address associated with the SSO provider
+- `id` (String) The ID of the SSO credential
+- `provider` (String) The SSO provider name

@@ -24,10 +24,20 @@ output "ssh_credential_requirements" {
   value = try(data.warpgate_user.eugene.credential_policy[0].ssh, [])
 }
 
+output "sso_credentials" {
+  value = data.warpgate_user.eugene.sso_credentials
+}
+
 # Use the data source to reference an existing user
 resource "warpgate_user_role" "eugene_developer" {
   user_id = data.warpgate_user.eugene.id
   role_id = warpgate_role.developers.id
+}
+
+# Example: Access SSO credential information
+locals {
+  user_sso_providers = [for cred in data.warpgate_user.eugene.sso_credentials : cred.provider]
+  has_google_sso     = contains(local.user_sso_providers, "google")
 }
 ```
 
@@ -48,6 +58,10 @@ In addition to the arguments listed above, the following attributes are exported
   * `ssh` - List of credential types required for SSH access.
   * `mysql` - List of credential types required for MySQL access.
   * `postgres` - List of credential types required for PostgreSQL access.
+* `sso_credentials` - List of SSO credentials associated with the user.
+  * `id` - The ID of the SSO credential.
+  * `provider` - The SSO provider name (e.g., 'google', 'github', 'okta').
+  * `email` - The email address associated with the SSO provider.
 
 ## Working with Credential Policies
 
@@ -60,10 +74,19 @@ locals {
   http_credentials     = try(data.warpgate_user.eugene.credential_policy[0].http, [])
   mysql_credentials    = try(data.warpgate_user.eugene.credential_policy[0].mysql, [])
   postgres_credentials = try(data.warpgate_user.eugene.credential_policy[0].postgres, [])
-  
+
   # Check if specific credential types are required
   requires_password   = contains(local.ssh_credentials, "Password")
   requires_public_key = contains(local.ssh_credentials, "PublicKey")
+  requires_sso        = contains(local.ssh_credentials, "Sso")
+
+  # Work with SSO credentials
+  sso_providers = [for cred in data.warpgate_user.eugene.sso_credentials : cred.provider]
+  has_google_sso = contains(local.sso_providers, "google")
+  has_github_sso = contains(local.sso_providers, "github")
+
+  # Get SSO emails by provider
+  google_emails = [for cred in data.warpgate_user.eugene.sso_credentials : cred.email if cred.provider == "google"]
 }
 ```
 
@@ -78,6 +101,7 @@ locals {
 
 - `credential_policy` (List of Object) The credential policy for the user (see [below for nested schema](#nestedatt--credential_policy))
 - `description` (String) The description of the user
+- `sso_credentials` (List of Object) The SSO credentials associated with the user (see [below for nested schema](#nestedatt--sso_credentials))
 - `username` (String) The username of the user
 
 <a id="nestedatt--credential_policy"></a>
@@ -89,3 +113,12 @@ Read-Only:
 - `mysql` (List of String)
 - `postgres` (List of String)
 - `ssh` (List of String)
+
+<a id="nestedatt--sso_credentials"></a>
+### Nested Schema for `sso_credentials`
+
+Read-Only:
+
+- `email` (String) The email address associated with the SSO provider
+- `id` (String) The ID of the SSO credential
+- `provider` (String) The SSO provider name
