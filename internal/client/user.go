@@ -245,3 +245,75 @@ func (c *Client) DeletePublicKeyCredential(ctx context.Context, userID string, c
 
 	return handleResponse(resp, nil)
 }
+
+// SsoCredential represents an SSO credential for a user
+type SsoCredential struct {
+	ID       string `json:"id,omitempty"`
+	Provider string `json:"provider"`
+	Email    string `json:"email"`
+}
+
+// GetSsoCredentials retrieves all SSO credentials for a user.
+func (c *Client) GetSsoCredentials(ctx context.Context, userID string) ([]SsoCredential, error) {
+	resp, err := c.doRequest(ctx, http.MethodGet, fmt.Sprintf("/users/%s/credentials/sso", userID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var creds []SsoCredential
+	if err := handleResponse(resp, &creds); err != nil {
+		return nil, err
+	}
+
+	return creds, nil
+}
+
+// AddSsoCredential adds an SSO credential to the specified user.
+func (c *Client) AddSsoCredential(ctx context.Context, userID string, provider, email string) (*SsoCredential, error) {
+	req := &SsoCredential{
+		Provider: provider,
+		Email:    email,
+	}
+
+	resp, err := c.doRequest(ctx, http.MethodPost, fmt.Sprintf("/users/%s/credentials/sso", userID), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var cred SsoCredential
+	if err := handleResponse(resp, &cred); err != nil {
+		return nil, err
+	}
+
+	return &cred, nil
+}
+
+// UpdateSsoCredential updates an existing SSO credential.
+func (c *Client) UpdateSsoCredential(ctx context.Context, userID string, credentialID string, provider, email string) (*SsoCredential, error) {
+	req := &SsoCredential{
+		Provider: provider,
+		Email:    email,
+	}
+
+	resp, err := c.doRequest(ctx, http.MethodPut, fmt.Sprintf("/users/%s/credentials/sso/%s", userID, credentialID), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var cred SsoCredential
+	if err := handleResponse(resp, &cred); err != nil {
+		return nil, err
+	}
+
+	return &cred, nil
+}
+
+// DeleteSsoCredential removes an SSO credential from a user.
+func (c *Client) DeleteSsoCredential(ctx context.Context, userID string, credentialID string) error {
+	resp, err := c.doRequest(ctx, http.MethodDelete, fmt.Sprintf("/users/%s/credentials/sso/%s", userID, credentialID), nil)
+	if err != nil {
+		return err
+	}
+
+	return handleResponse(resp, nil)
+}

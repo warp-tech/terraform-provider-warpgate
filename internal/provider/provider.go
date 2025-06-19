@@ -40,6 +40,7 @@ func New(version string) func() *schema.Provider {
 				"warpgate_target_role":           resourceTargetRole(),
 				"warpgate_password_credential":   resourcePasswordCredential(),
 				"warpgate_public_key_credential": resourcePublicKeyCredential(),
+				"warpgate_user_sso_credential":   resourceUserSsoCredential(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"warpgate_role":   dataSourceRole(),
@@ -96,4 +97,14 @@ func configure() func(context.Context, *schema.ResourceData) (any, diag.Diagnost
 
 		return meta, diags
 	}
+}
+
+// parseCompositeID parses a composite ID in the format "id1:id2" and returns
+// the individual components. Used for importing resources that have composite identifiers.
+func parseCompositeID(id string, part1Name, part2Name string) (string, string, error) {
+	parts := strings.Split(id, ":")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("expected ID in format '%s:%s', got: %s", part1Name, part2Name, id)
+	}
+	return parts[0], parts[1], nil
 }

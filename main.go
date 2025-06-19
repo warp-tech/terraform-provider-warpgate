@@ -5,8 +5,8 @@ import (
 	"log"
 	"runtime/debug"
 
-	"github.com/warp-tech/terraform-provider-warpgate/internal/provider"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"github.com/warp-tech/terraform-provider-warpgate/internal/provider"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website
