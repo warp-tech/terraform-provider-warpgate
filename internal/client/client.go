@@ -4,6 +4,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,9 +20,10 @@ const (
 
 // Config contains the configuration for the client
 type Config struct {
-	Host    string
-	Token   string
-	Timeout time.Duration
+	Host               string
+	Token              string
+	Timeout            time.Duration
+	InsecureSkipVerify bool
 }
 
 // Client is a Warpgate API client
@@ -53,6 +55,9 @@ func NewClient(cfg *Config) (*Client, error) {
 		token:   cfg.Token,
 		httpClient: &http.Client{
 			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.InsecureSkipVerify},
+			},
 		},
 	}, nil
 }

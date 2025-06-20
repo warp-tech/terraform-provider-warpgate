@@ -26,6 +26,10 @@ terraform {
 provider "warpgate" {
   host  = "https://warpgate.example.com"
   token = var.warpgate_token
+
+  # Optionally disable TLS while connecting to Warpgate
+  # Required only for self-signed certificates
+  insecure_skip_verify = true
 }
 
 # Create a role
@@ -96,4 +100,5 @@ The WarpGate provider offers a way to authenticate with the WarpGate API using a
 
 ### Optional
 
+- `insecure_skip_verify` (Bool) Whether to skip the TLS certificate verification (self-signed certificates)
 - `token` (String, Sensitive) API token for authenticating with WarpGate API
