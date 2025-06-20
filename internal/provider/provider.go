@@ -24,6 +24,12 @@ func New(version string) func() *schema.Provider {
 					DefaultFunc: schema.EnvDefaultFunc("WARPGATE_HOST", nil),
 					Description: "The Warpgate API host URL (e.g., https://warpgate.example.com)",
 				},
+				"insecure_skip_verify": {
+					Type:        schema.TypeBool,
+					Optional:    true,
+					DefaultFunc: schema.EnvDefaultFunc("WARPGATE_INSECURE_SKIP_VERIFY", nil),
+					Description: "Whether to skip the TLS certificate verification (self-signed certificates)",
+				},
 				"token": {
 					Type:        schema.TypeString,
 					Optional:    true,
@@ -70,6 +76,7 @@ func configure() func(context.Context, *schema.ResourceData) (any, diag.Diagnost
 
 		host := d.Get("host").(string)
 		token := d.Get("token").(string)
+		insecureSkipVerify := d.Get("insecure_skip_verify").(bool)
 
 		// Ensure the host has the API path
 		apiPath := "/@warpgate/admin/api"
@@ -82,8 +89,9 @@ func configure() func(context.Context, *schema.ResourceData) (any, diag.Diagnost
 		}
 
 		cfg := &client.Config{
-			Host:  host,
-			Token: token,
+			Host:               host,
+			Token:              token,
+			InsecureSkipVerify: insecureSkipVerify,
 		}
 
 		c, err := client.NewClient(cfg)
