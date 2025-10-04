@@ -60,7 +60,7 @@ In addition to the arguments listed above, the following attributes are exported
   * `postgres` - List of credential types required for PostgreSQL access.
 * `sso_credentials` - List of SSO credentials associated with the user.
   * `id` - The ID of the SSO credential.
-  * `provider` - The SSO provider name (e.g., 'google', 'github', 'okta').
+  * `sso_provider` - The SSO provider name (e.g., 'google', 'github', 'okta').
   * `email` - The email address associated with the SSO provider.
 
 ## Working with Credential Policies
@@ -81,12 +81,12 @@ locals {
   requires_sso        = contains(local.ssh_credentials, "Sso")
 
   # Work with SSO credentials
-  sso_providers = [for cred in data.warpgate_user.eugene.sso_credentials : cred.provider]
+  sso_providers = [for cred in data.warpgate_user.eugene.sso_credentials : cred.sso_provider]
   has_google_sso = contains(local.sso_providers, "google")
   has_github_sso = contains(local.sso_providers, "github")
 
   # Get SSO emails by provider
-  google_emails = [for cred in data.warpgate_user.eugene.sso_credentials : cred.email if cred.provider == "google"]
+  google_emails = [for cred in data.warpgate_user.eugene.sso_credentials : cred.email if cred.sso_provider == "google"]
 }
 ```
 
@@ -121,4 +121,4 @@ Read-Only:
 
 - `email` (String) The email address associated with the SSO provider
 - `id` (String) The ID of the SSO credential
-- `provider` (String) The SSO provider name
+- `sso_provider` (String) The SSO provider name
