@@ -78,7 +78,7 @@ func dataSourceUser() *schema.Resource {
 							Computed:    true,
 							Description: "The ID of the SSO credential",
 						},
-						"provider": {
+						"sso_provider": {
 							Type:        schema.TypeString,
 							Computed:    true,
 							Description: "The SSO provider name",
@@ -106,7 +106,7 @@ func flattenSsoCredentials(credentials []client.SsoCredential) []any {
 	for i, cred := range credentials {
 		result[i] = map[string]any{
 			"id":       cred.ID,
-			"provider": cred.Provider,
+			"sso_provider": cred.Provider,
 			"email":    cred.Email,
 		}
 	}

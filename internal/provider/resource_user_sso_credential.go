@@ -29,7 +29,7 @@ func resourceUserSsoCredential() *schema.Resource {
 				Description:  "The ID of the user to add the SSO credential to",
 				ValidateFunc: validation.StringIsNotEmpty,
 			},
-			"provider": {
+			"sso_provider": {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "The SSO provider name (e.g., 'google', 'github', 'okta')",
@@ -51,7 +51,7 @@ func resourceUserSsoCredentialCreate(ctx context.Context, d *schema.ResourceData
 	c := providerMeta.client
 
 	userID := d.Get("user_id").(string)
-	provider := d.Get("provider").(string)
+	provider := d.Get("sso_provider").(string)
 	email := d.Get("email").(string)
 
 	// Verify user exists
@@ -104,7 +104,7 @@ func resourceUserSsoCredentialRead(ctx context.Context, d *schema.ResourceData, 
 		return diags
 	}
 
-	if err := d.Set("provider", credential.Provider); err != nil {
+	if err := d.Set("sso_provider", credential.Provider); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set provider: %w", err))
 	}
 
@@ -122,7 +122,7 @@ func resourceUserSsoCredentialUpdate(ctx context.Context, d *schema.ResourceData
 
 	userID := d.Get("user_id").(string)
 	credentialID := d.Id()
-	provider := d.Get("provider").(string)
+	provider := d.Get("sso_provider").(string)
 	email := d.Get("email").(string)
 
 	_, err := c.UpdateSsoCredential(ctx, userID, credentialID, provider, email)
