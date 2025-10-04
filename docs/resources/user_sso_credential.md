@@ -28,21 +28,21 @@ resource "warpgate_user" "john_doe" {
 # Add Google SSO credential
 resource "warpgate_user_sso_credential" "john_google" {
   user_id  = warpgate_user.john_doe.id
-  provider = "google"
+  sso_provider = "google"
   email    = "john.doe@company.com"
 }
 
 # Add GitHub SSO credential for the same user
 resource "warpgate_user_sso_credential" "john_github" {
   user_id  = warpgate_user.john_doe.id
-  provider = "github"
+  sso_provider = "github"
   email    = "john.doe@company.com"
 }
 
 # Add Okta SSO credential
 resource "warpgate_user_sso_credential" "john_okta" {
   user_id  = warpgate_user.john_doe.id
-  provider = "okta"
+  sso_provider = "okta"
   email    = "john.doe@company.com"
 }
 ```
@@ -65,14 +65,14 @@ resource "warpgate_user" "multi_sso_user" {
 # Primary corporate SSO
 resource "warpgate_user_sso_credential" "alice_okta" {
   user_id  = warpgate_user.multi_sso_user.id
-  provider = "okta"
+  sso_provider = "okta"
   email    = "alice@company.com"
 }
 
 # Backup SSO for personal projects
 resource "warpgate_user_sso_credential" "alice_google" {
   user_id  = warpgate_user.multi_sso_user.id
-  provider = "google"
+  sso_provider = "google"
   email    = "alice.personal@gmail.com"
 }
 ```
@@ -82,7 +82,7 @@ resource "warpgate_user_sso_credential" "alice_google" {
 The following arguments are supported:
 
 * `user_id` - (Required, Forces new resource) The ID of the user to add the SSO credential to. Changing this forces a new resource to be created.
-* `provider` - (Required) The SSO provider name. Common values include `google`, `github`, `okta`, `azure`, or any custom SAML/OIDC provider configured in WarpGate.
+* `sso_provider` - (Required) The SSO provider name. Common values include `google`, `github`, `okta`, `azure`, or any custom SAML/OIDC provider configured in WarpGate.
 * `email` - (Required) The email address associated with the SSO provider. This should match the email address in the user's SSO provider account.
 
 ## Attribute Reference
@@ -158,7 +158,7 @@ resource "warpgate_user" "service_account" {
 
 resource "warpgate_user_sso_credential" "service_google" {
   user_id  = warpgate_user.service_account.id
-  provider = "google"
+  sso_provider = "google"
   email    = "ci-cd-bot@company.com"
 }
 ```
@@ -197,7 +197,7 @@ resource "warpgate_user" "prod_user" {
 ### Required
 
 - `email` (String) The email address associated with the SSO provider
-- `provider` (String) The SSO provider name (e.g., 'google', 'github', 'okta')
+- `sso_provider` (String) The SSO provider name (e.g., 'google', 'github', 'okta')
 - `user_id` (String) The ID of the user to add the SSO credential to
 
 ### Read-Only

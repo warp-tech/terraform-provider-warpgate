@@ -49,13 +49,13 @@ resource "warpgate_user" "sso_user" {
 # Add SSO credentials to the user
 resource "warpgate_user_sso_credential" "google_sso" {
   user_id  = warpgate_user.sso_user.id
-  provider = "google"
+  sso_provider = "google"
   email    = "john.doe@company.com"
 }
 
 resource "warpgate_user_sso_credential" "github_sso" {
   user_id  = warpgate_user.sso_user.id
-  provider = "github"
+  sso_provider = "github"
   email    = "john.doe@company.com"
 }
 ```
@@ -100,7 +100,7 @@ resource "warpgate_user" "sso_user" {
 # Add Google SSO credential
 resource "warpgate_user_sso_credential" "alice_google" {
   user_id  = warpgate_user.sso_user.id
-  provider = "google"
+  sso_provider = "google"
   email    = "alice@company.com"
 }
 ```
@@ -155,4 +155,4 @@ Read-Only:
 
 - `email` (String) The email address associated with the SSO provider
 - `id` (String) The ID of the SSO credential
-- `provider` (String) The SSO provider name
+- `sso_provider` (String) The SSO provider name
