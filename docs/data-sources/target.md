@@ -14,6 +14,8 @@ Retrieves information about a specific target in Warpgate. This data source allo
 ```hcl
 data "warpgate_target" "web_server" {
   id = "12345678-1234-1234-1234-123456789012"
+  // optionally
+  // name = "webserver"
 }
 
 output "target_name" {
@@ -42,20 +44,20 @@ locals {
   is_http     = length(data.warpgate_target.server.http_options) > 0
   is_mysql    = length(data.warpgate_target.server.mysql_options) > 0
   is_postgres = length(data.warpgate_target.server.postgres_options) > 0
-  
+
   # Safely access target details
   host = local.is_ssh ? data.warpgate_target.server.ssh_options[0].host :
          local.is_http ? "<HTTP target>" :
          local.is_mysql ? data.warpgate_target.server.mysql_options[0].host :
-         local.is_postgres ? data.warpgate_target.server.postgres_options[0].host : 
+         local.is_postgres ? data.warpgate_target.server.postgres_options[0].host :
          "unknown"
 }
 
 output "target_type" {
-  value = local.is_ssh ? "SSH" : 
-          local.is_http ? "HTTP" : 
-          local.is_mysql ? "MySQL" : 
-          local.is_postgres ? "PostgreSQL" : 
+  value = local.is_ssh ? "SSH" :
+          local.is_http ? "HTTP" :
+          local.is_mysql ? "MySQL" :
+          local.is_postgres ? "PostgreSQL" :
           "unknown"
 }
 
@@ -68,54 +70,58 @@ output "target_host" {
 
 The following arguments are supported:
 
-* `id` - (Required) The ID of the target to look up.
+- `id` - The ID of the target to look up.
+- `name` - The name of the target to look up.
+
+Either `id` or `name` should be specified.
 
 ## Attribute Reference
 
 In addition to the arguments listed above, the following attributes are exported:
 
-* `name` - The name of the target.
-* `description` - The description of the target.
-* `allow_roles` - The list of roles allowed to access this target.
+- `name` - The name of the target.
+- `description` - The description of the target.
+- `allow_roles` - The list of roles allowed to access this target.
 
 Based on the target type, one of the following option blocks will be populated:
 
-* `ssh_options` - Configuration for SSH targets.
-  * `host` - The SSH server hostname or IP address.
-  * `port` - The SSH server port.
-  * `username` - The SSH username.
-  * `allow_insecure_algos` - Whether insecure SSH algorithms are allowed.
-  * `password_auth` - Password authentication configuration (if applicable).
-    * `password` - The password for SSH authentication.
-  * `public_key_auth` - Public key authentication configuration (if applicable).
+- `ssh_options` - Configuration for SSH targets.
+  - `host` - The SSH server hostname or IP address.
+  - `port` - The SSH server port.
+  - `username` - The SSH username.
+  - `allow_insecure_algos` - Whether insecure SSH algorithms are allowed.
+  - `password_auth` - Password authentication configuration (if applicable).
+    - `password` - The password for SSH authentication.
+  - `public_key_auth` - Public key authentication configuration (if applicable).
 
-* `http_options` - Configuration for HTTP targets.
-  * `url` - The HTTP server URL.
-  * `tls` - TLS configuration.
-    * `mode` - TLS mode (Disabled, Preferred, Required).
-    * `verify` - Whether TLS certificates are verified.
-  * `headers` - HTTP headers included in requests.
-  * `external_host` - External host for HTTP requests.
+- `http_options` - Configuration for HTTP targets.
+  - `url` - The HTTP server URL.
+  - `tls` - TLS configuration.
+    - `mode` - TLS mode (Disabled, Preferred, Required).
+    - `verify` - Whether TLS certificates are verified.
+  - `headers` - HTTP headers included in requests.
+  - `external_host` - External host for HTTP requests.
 
-* `mysql_options` - Configuration for MySQL targets.
-  * `host` - The MySQL server hostname or IP address.
-  * `port` - The MySQL server port.
-  * `username` - The MySQL username.
-  * `password` - The MySQL password.
-  * `tls` - TLS configuration.
-    * `mode` - TLS mode (Disabled, Preferred, Required).
-    * `verify` - Whether TLS certificates are verified.
+- `mysql_options` - Configuration for MySQL targets.
+  - `host` - The MySQL server hostname or IP address.
+  - `port` - The MySQL server port.
+  - `username` - The MySQL username.
+  - `password` - The MySQL password.
+  - `tls` - TLS configuration.
+    - `mode` - TLS mode (Disabled, Preferred, Required).
+    - `verify` - Whether TLS certificates are verified.
 
-* `postgres_options` - Configuration for PostgreSQL targets.
-  * `host` - The PostgreSQL server hostname or IP address.
-  * `port` - The PostgreSQL server port.
-  * `username` - The PostgreSQL username.
-  * `password` - The PostgreSQL password.
-  * `tls` - TLS configuration.
-    * `mode` - TLS mode (Disabled, Preferred, Required).
-    * `verify` - Whether TLS certificates are verified.
+- `postgres_options` - Configuration for PostgreSQL targets.
+  - `host` - The PostgreSQL server hostname or IP address.
+  - `port` - The PostgreSQL server port.
+  - `username` - The PostgreSQL username.
+  - `password` - The PostgreSQL password.
+  - `tls` - TLS configuration.
+    - `mode` - TLS mode (Disabled, Preferred, Required).
+    - `verify` - Whether TLS certificates are verified.
 
 <!-- schema generated by tfplugindocs -->
+
 ## Schema
 
 ### Required
@@ -133,6 +139,7 @@ Based on the target type, one of the following option blocks will be populated:
 - `ssh_options` (List of Object) SSH target options (see [below for nested schema](#nestedatt--ssh_options))
 
 <a id="nestedatt--http_options"></a>
+
 ### Nested Schema for `http_options`
 
 Read-Only:
@@ -143,6 +150,7 @@ Read-Only:
 - `url` (String)
 
 <a id="nestedobjatt--http_options--tls"></a>
+
 ### Nested Schema for `http_options.tls`
 
 Read-Only:
@@ -150,9 +158,8 @@ Read-Only:
 - `mode` (String)
 - `verify` (Boolean)
 
-
-
 <a id="nestedatt--mysql_options"></a>
+
 ### Nested Schema for `mysql_options`
 
 Read-Only:
@@ -164,6 +171,7 @@ Read-Only:
 - `username` (String)
 
 <a id="nestedobjatt--mysql_options--tls"></a>
+
 ### Nested Schema for `mysql_options.tls`
 
 Read-Only:
@@ -171,9 +179,8 @@ Read-Only:
 - `mode` (String)
 - `verify` (Boolean)
 
-
-
 <a id="nestedatt--postgres_options"></a>
+
 ### Nested Schema for `postgres_options`
 
 Read-Only:
@@ -185,6 +192,7 @@ Read-Only:
 - `username` (String)
 
 <a id="nestedobjatt--postgres_options--tls"></a>
+
 ### Nested Schema for `postgres_options.tls`
 
 Read-Only:
@@ -192,9 +200,8 @@ Read-Only:
 - `mode` (String)
 - `verify` (Boolean)
 
-
-
 <a id="nestedatt--ssh_options"></a>
+
 ### Nested Schema for `ssh_options`
 
 Read-Only:
@@ -207,14 +214,15 @@ Read-Only:
 - `username` (String)
 
 <a id="nestedobjatt--ssh_options--password_auth"></a>
+
 ### Nested Schema for `ssh_options.password_auth`
 
 Read-Only:
 
 - `password` (String)
 
-
 <a id="nestedobjatt--ssh_options--public_key_auth"></a>
+
 ### Nested Schema for `ssh_options.public_key_auth`
 
 Read-Only:

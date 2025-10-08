@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/warp-tech/terraform-provider-warpgate/internal/client"
 )
 
 // dataSourceTarget creates and returns a schema for the target data source.
@@ -15,14 +16,19 @@ func dataSourceTarget() *schema.Resource {
 		ReadContext: dataSourceTargetRead,
 		Schema: map[string]*schema.Schema{
 			"id": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The ID of the target",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The ID of the role",
+				ConflictsWith: []string{},
+				AtLeastOneOf:  []string{"id", "name"},
 			},
 			"name": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The name of the target",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The name of the role",
+				ConflictsWith: []string{},
+				AtLeastOneOf:  []string{"id", "name"},
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -248,16 +254,41 @@ func dataSourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any)
 	c := providerMeta.client
 
 	var diags diag.Diagnostics
+	var target *client.Target
 
-	id := d.Get("id").(string)
+	id, idOk := d.GetOk("id")
+	name, nameOk := d.GetOk("name")
 
-	target, err := c.GetTarget(ctx, id)
-	if err != nil {
-		return diag.FromErr(fmt.Errorf("failed to read target: %w", err))
+	if !idOk && !nameOk {
+		return diag.Errorf("either 'id' or 'name' must be specified")
 	}
 
-	if target == nil {
-		return diag.Errorf("target with ID %s not found", id)
+	if nameStr, ok := name.(string); ok && name != "" {
+		targets, err := c.GetTargets(ctx, nameStr)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to search targets: %w", err))
+		}
+
+		for i := range targets {
+			if targets[i].Name == nameStr {
+				target = &targets[i]
+				break
+			}
+		}
+
+		if target == nil {
+			return diag.Errorf("target with name %s not found", nameStr)
+		}
+	} else {
+		idStr := id.(string)
+		target, err := c.GetTarget(ctx, idStr)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to read target: %w", err))
+		}
+
+		if target == nil {
+			return diag.Errorf("target with ID %s not found", idStr)
+		}
 	}
 
 	d.SetId(target.ID)

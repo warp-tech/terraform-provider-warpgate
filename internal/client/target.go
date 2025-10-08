@@ -101,11 +101,13 @@ type TargetDataRequest struct {
 // the provided search term.
 func (c *Client) GetTargets(ctx context.Context, search string) ([]Target, error) {
 	path := "/targets"
-	if search != "" {
-		path = fmt.Sprintf("%s?search=%s", path, search)
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
 	}
+	req.URL.Query().Add("search", search)
 
-	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	resp, err := c.doRequest(ctx, http.MethodGet, req.URL.Path, nil)
 	if err != nil {
 		return nil, err
 	}
