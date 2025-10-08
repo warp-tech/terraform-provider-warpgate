@@ -16,14 +16,19 @@ func dataSourceUser() *schema.Resource {
 		ReadContext: dataSourceUserRead,
 		Schema: map[string]*schema.Schema{
 			"id": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The ID of the user",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The ID of the user",
+				ConflictsWith: []string{},
+				AtLeastOneOf:  []string{"id", "username"},
 			},
 			"username": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The username of the user",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The username of the user",
+				ConflictsWith: []string{},
+				AtLeastOneOf:  []string{"id", "username"},
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -105,34 +110,63 @@ func flattenSsoCredentials(credentials []client.SsoCredential) []any {
 	result := make([]any, len(credentials))
 	for i, cred := range credentials {
 		result[i] = map[string]any{
-			"id":       cred.ID,
+			"id":           cred.ID,
 			"sso_provider": cred.Provider,
-			"email":    cred.Email,
+			"email":        cred.Email,
 		}
 	}
 	return result
 }
 
-// dataSourceUserRead retrieves user data from Warpgate by ID and populates
+// dataSourceUserRead retrieves user data from Warpgate by ID or username filter and populates
 // the Terraform state.
 func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	providerMeta := meta.(*providerMeta)
 	c := providerMeta.client
 
 	var diags diag.Diagnostics
+	var user *client.User
 
-	id := d.Get("id").(string)
+	id, idOk := d.GetOk("id")
+	username, usernameOk := d.GetOk("username")
 
-	user, err := c.GetUser(ctx, id)
-	if err != nil {
-		return diag.FromErr(fmt.Errorf("failed to read user: %w", err))
+	if !idOk && !usernameOk {
+		return diag.Errorf("either 'id' or 'username' must be specified")
 	}
 
-	if user == nil {
-		return diag.Errorf("user with ID %s not found", id)
+	if usernameStr, ok := username.(string); ok && usernameStr != "" {
+		users, err := c.GetUsers(ctx, usernameStr)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to search users: %w", err))
+		}
+
+		for i := range users {
+			if users[i].Username == usernameStr {
+				user = &users[i]
+				break
+			}
+		}
+
+		if user == nil {
+			return diag.Errorf("user with username %s not found", usernameStr)
+		}
+	} else {
+		idStr := id.(string)
+		var err error
+		user, err = c.GetUser(ctx, idStr)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to read user: %w", err))
+		}
+
+		if user == nil {
+			return diag.Errorf("user with ID %s not found", idStr)
+		}
 	}
 
 	d.SetId(user.ID)
+	if err := d.Set("id", user.ID); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set id: %w", err))
+	}
 	if err := d.Set("username", user.Username); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set username: %w", err))
 	}
@@ -148,7 +182,7 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, meta any) d
 	}
 
 	// Get SSO credentials for the user
-	ssoCredentials, err := c.GetSsoCredentials(ctx, id)
+	ssoCredentials, err := c.GetSsoCredentials(ctx, user.ID)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("failed to read SSO credentials: %w", err))
 	}
