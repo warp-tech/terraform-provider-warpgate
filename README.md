@@ -71,6 +71,7 @@ export WARPGATE_TOKEN="your-api-token"
 - `warpgate_target_role` - Manage role assignments to targets
 - `warpgate_password_credential` - Manage password credentials for users
 - `warpgate_public_key_credential` - Manage SSH public key credentials for users
+- `warpgate_ticket` - Manage access tickets
 
 #### Data Sources
 
@@ -220,6 +221,15 @@ resource "warpgate_target" "postgres_db" {
 resource "warpgate_target_role" "app_server_access" {
   target_id = warpgate_target.app_server.id
   role_id   = warpgate_role.developers.id
+}
+```
+
+### Creating an access ticket
+
+```hcl
+resource "warpgate_ticket" "ticket" {
+  username = "admin"
+  target_name = "internal-web-app"
 }
 ```
 

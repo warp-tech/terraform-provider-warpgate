@@ -47,6 +47,7 @@ func New(version string) func() *schema.Provider {
 				"warpgate_password_credential":   resourcePasswordCredential(),
 				"warpgate_public_key_credential": resourcePublicKeyCredential(),
 				"warpgate_user_sso_credential":   resourceUserSsoCredential(),
+				"warpgate_ticket":                resourceTicket(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"warpgate_role":   dataSourceRole(),
