@@ -30,6 +30,7 @@ type Target struct {
 	ID          string        `json:"id"`
 	Name        string        `json:"name"`
 	Description string        `json:"description,omitempty"`
+	GroupId     string        `json:"group_id,omitempty"`
 	AllowRoles  []string      `json:"allow_roles"`
 	Options     TargetOptions `json:"options"`
 }
