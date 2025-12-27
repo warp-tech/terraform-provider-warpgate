@@ -94,6 +94,7 @@ type TargetPostgresOptions struct {
 type TargetDataRequest struct {
 	Name        string        `json:"name"`
 	Description string        `json:"description,omitempty"`
+	GroupId     string        `json:"group_id"`
 	Options     TargetOptions `json:"options"`
 }
 

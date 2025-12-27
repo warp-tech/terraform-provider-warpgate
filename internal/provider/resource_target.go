@@ -42,6 +42,11 @@ func resourceTarget() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"group_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Which target group this target is assigned to",
+			},
 			// SSH Target Configuration
 			"ssh_options": {
 				Type:          schema.TypeList,
@@ -299,6 +304,7 @@ func resourceTargetCreate(ctx context.Context, d *schema.ResourceData, meta any)
 
 	name := d.Get("name").(string)
 	description := d.Get("description").(string)
+	groupId := d.Get("group_id").(string)
 
 	// Determine which type of target options is being used and build the appropriate request
 	targetOptions, err := buildTargetOptions(d)
@@ -310,6 +316,7 @@ func resourceTargetCreate(ctx context.Context, d *schema.ResourceData, meta any)
 		Name:        name,
 		Description: description,
 		Options:     targetOptions,
+		GroupId:     groupId,
 	}
 
 	target, err := c.CreateTarget(ctx, req)
@@ -372,6 +379,7 @@ func resourceTargetUpdate(ctx context.Context, d *schema.ResourceData, meta any)
 	id := d.Id()
 	name := d.Get("name").(string)
 	description := d.Get("description").(string)
+	groupId := d.Get("group_id").(string)
 
 	// Determine which type of target options is being used and build the appropriate request
 	targetOptions, err := buildTargetOptions(d)
@@ -383,6 +391,7 @@ func resourceTargetUpdate(ctx context.Context, d *schema.ResourceData, meta any)
 		Name:        name,
 		Description: description,
 		Options:     targetOptions,
+		GroupId:     groupId,
 	}
 
 	_, err = c.UpdateTarget(ctx, id, req)
