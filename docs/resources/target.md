@@ -104,6 +104,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the target. Must be unique within the WarpGate instance.
 * `description` - (Optional) A human-readable description of the target.
+* `group_id` - (Optional) The ID of the target group this target is assigned to.
 
 One of the following option blocks must be specified:
 
@@ -167,6 +168,7 @@ $ terraform import warpgate_target.web_server 12345678-1234-1234-1234-1234567890
 ### Optional
 
 - `description` (String) The description of the target
+- `group_id` (String) Which target group this target is assigned to
 - `http_options` (Block List, Max: 1) HTTP target options (see [below for nested schema](#nestedblock--http_options))
 - `mysql_options` (Block List, Max: 1) MySQL target options (see [below for nested schema](#nestedblock--mysql_options))
 - `postgres_options` (Block List, Max: 1) PostgreSQL target options (see [below for nested schema](#nestedblock--postgres_options))
