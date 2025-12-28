@@ -81,6 +81,7 @@ In addition to the arguments listed above, the following attributes are exported
 
 - `name` - The name of the target.
 - `description` - The description of the target.
+- `group_id` - The ID of the target group this target is assigned to.
 - `allow_roles` - The list of roles allowed to access this target.
 
 Based on the target type, one of the following option blocks will be populated:
@@ -132,6 +133,7 @@ Based on the target type, one of the following option blocks will be populated:
 
 - `allow_roles` (List of String) The list of roles allowed to access this target
 - `description` (String) The description of the target
+- `group_id` (String) Which target group this target is assigned to
 - `http_options` (List of Object) HTTP target options (see [below for nested schema](#nestedatt--http_options))
 - `mysql_options` (List of Object) MySQL target options (see [below for nested schema](#nestedatt--mysql_options))
 - `name` (String) The name of the target

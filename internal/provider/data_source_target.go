@@ -35,6 +35,11 @@ func dataSourceTarget() *schema.Resource {
 				Computed:    true,
 				Description: "The description of the target",
 			},
+			"group_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Which target group this target is assigned to",
+			},
 			"allow_roles": {
 				Type:        schema.TypeList,
 				Computed:    true,
@@ -298,6 +303,10 @@ func dataSourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any)
 
 	if err := d.Set("description", target.Description); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set description: %w", err))
+	}
+
+	if err := d.Set("group_id", target.GroupId); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set group_id: %w", err))
 	}
 
 	if err := d.Set("allow_roles", target.AllowRoles); err != nil {
