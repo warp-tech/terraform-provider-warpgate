@@ -14,6 +14,29 @@ type Role struct {
 	Description string `json:"description,omitempty"`
 }
 
+// UserRoleAssignment represents a user's assignment to a role with expiry info
+type UserRoleAssignment struct {
+	UserID            string  `json:"user_id"`
+	RoleID            string  `json:"role_id"`
+	RoleName          string  `json:"role_name"`
+	GrantedAt         string  `json:"granted_at"`
+	GrantedBy         *string `json:"granted_by,omitempty"`
+	GrantedByUsername *string `json:"granted_by_username,omitempty"`
+	ExpiresAt         *string `json:"expires_at,omitempty"`
+	IsExpired         bool    `json:"is_expired"`
+	IsActive          bool    `json:"is_active"`
+}
+
+// AddUserRoleRequest is the request payload for adding a user role with optional expiry
+type AddUserRoleRequest struct {
+	ExpiresAt *string `json:"expires_at,omitempty"`
+}
+
+// UpdateUserRoleExpiryRequest is the request payload for updating user role expiry
+type UpdateUserRoleExpiryRequest struct {
+	ExpiresAt *string `json:"expires_at,omitempty"`
+}
+
 // RoleCreateRequest is the request payload for creating a role
 type RoleCreateRequest struct {
 	Name        string `json:"name"`
@@ -105,14 +128,23 @@ func (c *Client) DeleteRole(ctx context.Context, id string) error {
 	return handleResponse(resp, nil)
 }
 
-// AddUserRole assigns a role to a user in Warpgate.
-func (c *Client) AddUserRole(ctx context.Context, userID, roleID string) error {
-	resp, err := c.doRequest(ctx, http.MethodPost, fmt.Sprintf("/users/%s/roles/%s", userID, roleID), nil)
-	if err != nil {
-		return err
+// AddUserRole assigns a role to a user in Warpgate with optional expiry.
+func (c *Client) AddUserRole(ctx context.Context, userID, roleID string, expiresAt *string) (*UserRoleAssignment, error) {
+	req := &AddUserRoleRequest{
+		ExpiresAt: expiresAt,
 	}
 
-	return handleResponse(resp, nil)
+	resp, err := c.doRequest(ctx, http.MethodPost, fmt.Sprintf("/users/%s/roles/%s", userID, roleID), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var assignment UserRoleAssignment
+	if err := handleResponse(resp, &assignment); err != nil {
+		return nil, err
+	}
+
+	return &assignment, nil
 }
 
 // DeleteUserRole removes a role assignment from a user in Warpgate.
@@ -125,19 +157,73 @@ func (c *Client) DeleteUserRole(ctx context.Context, userID, roleID string) erro
 	return handleResponse(resp, nil)
 }
 
-// GetUserRoles retrieves all roles assigned to a specific user.
-func (c *Client) GetUserRoles(ctx context.Context, userID string) ([]Role, error) {
+// GetUserRoles retrieves all roles assigned to a specific user with assignment details.
+func (c *Client) GetUserRoles(ctx context.Context, userID string) ([]UserRoleAssignment, error) {
 	resp, err := c.doRequest(ctx, http.MethodGet, fmt.Sprintf("/users/%s/roles", userID), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var roles []Role
-	if err := handleResponse(resp, &roles); err != nil {
+	var assignments []UserRoleAssignment
+	if err := handleResponse(resp, &assignments); err != nil {
 		return nil, err
 	}
 
-	return roles, nil
+	return assignments, nil
+}
+
+// GetUserRole retrieves a specific user-role assignment.
+func (c *Client) GetUserRole(ctx context.Context, userID, roleID string) (*UserRoleAssignment, error) {
+	resp, err := c.doRequest(ctx, http.MethodGet, fmt.Sprintf("/users/%s/roles/%s", userID, roleID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		resp.Body.Close()
+		return nil, nil
+	}
+
+	var assignment UserRoleAssignment
+	if err := handleResponse(resp, &assignment); err != nil {
+		return nil, err
+	}
+
+	return &assignment, nil
+}
+
+// UpdateUserRoleExpiry updates the expiry time for a user-role assignment.
+func (c *Client) UpdateUserRoleExpiry(ctx context.Context, userID, roleID string, expiresAt *string) (*UserRoleAssignment, error) {
+	req := &UpdateUserRoleExpiryRequest{
+		ExpiresAt: expiresAt,
+	}
+
+	resp, err := c.doRequest(ctx, http.MethodPut, fmt.Sprintf("/users/%s/roles/%s/expiry", userID, roleID), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var assignment UserRoleAssignment
+	if err := handleResponse(resp, &assignment); err != nil {
+		return nil, err
+	}
+
+	return &assignment, nil
+}
+
+// RemoveUserRoleExpiry removes the expiry time from a user-role assignment.
+func (c *Client) RemoveUserRoleExpiry(ctx context.Context, userID, roleID string) (*UserRoleAssignment, error) {
+	resp, err := c.doRequest(ctx, http.MethodDelete, fmt.Sprintf("/users/%s/roles/%s/expiry", userID, roleID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var assignment UserRoleAssignment
+	if err := handleResponse(resp, &assignment); err != nil {
+		return nil, err
+	}
+
+	return &assignment, nil
 }
 
 // AddTargetRole assigns a role to a target in Warpgate.
