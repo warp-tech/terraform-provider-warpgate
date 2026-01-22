@@ -140,6 +140,9 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 	return handleResponse(resp, nil)
 }
 
+// NOTE: User-role methods (AddUserRole, GetUserRoles, GetUserRole, UpdateUserRoleExpiry,
+// RemoveUserRoleExpiry, DeleteUserRole) are defined in role.go to avoid duplication.
+
 // PasswordCredential represents a password credential for a user
 type PasswordCredential struct {
 	ID       string `json:"id,omitempty"`
