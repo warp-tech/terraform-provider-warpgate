@@ -24,8 +24,8 @@ func TestGetTargetRoleFileTransferPermission(t *testing.T) {
 			roleID:         "role-456",
 			responseStatus: http.StatusOK,
 			responseBody: &FileTransferPermission{
-				AllowFileUpload:   true,
-				AllowFileDownload: false,
+				AllowFileUpload:   boolPtr(true),
+				AllowFileDownload: boolPtr(false),
 				AllowedPaths:      []string{"/home", "/var/log"},
 				BlockedExtensions: []string{".exe", ".sh"},
 				MaxFileSize:       int64Ptr(1024),
@@ -34,13 +34,13 @@ func TestGetTargetRoleFileTransferPermission(t *testing.T) {
 			wantNil: false,
 		},
 		{
-			name:           "successful get with defaults only",
+			name:           "successful get with defaults only (inherit)",
 			targetID:       "target-123",
 			roleID:         "role-456",
 			responseStatus: http.StatusOK,
 			responseBody: &FileTransferPermission{
-				AllowFileUpload:   true,
-				AllowFileDownload: true,
+				AllowFileUpload:   nil, // inherit from role
+				AllowFileDownload: nil, // inherit from role
 			},
 			wantErr: false,
 			wantNil: false,
@@ -100,11 +100,11 @@ func TestGetTargetRoleFileTransferPermission(t *testing.T) {
 			}
 
 			if result != nil && tt.responseBody != nil {
-				if result.AllowFileUpload != tt.responseBody.AllowFileUpload {
-					t.Errorf("AllowFileUpload = %v, want %v", result.AllowFileUpload, tt.responseBody.AllowFileUpload)
+				if !compareBoolPtrs(result.AllowFileUpload, tt.responseBody.AllowFileUpload) {
+					t.Errorf("AllowFileUpload = %v, want %v", ptrToStr(result.AllowFileUpload), ptrToStr(tt.responseBody.AllowFileUpload))
 				}
-				if result.AllowFileDownload != tt.responseBody.AllowFileDownload {
-					t.Errorf("AllowFileDownload = %v, want %v", result.AllowFileDownload, tt.responseBody.AllowFileDownload)
+				if !compareBoolPtrs(result.AllowFileDownload, tt.responseBody.AllowFileDownload) {
+					t.Errorf("AllowFileDownload = %v, want %v", ptrToStr(result.AllowFileDownload), ptrToStr(tt.responseBody.AllowFileDownload))
 				}
 			}
 		})
@@ -126,16 +126,16 @@ func TestUpdateTargetRoleFileTransferPermission(t *testing.T) {
 			targetID: "target-123",
 			roleID:   "role-456",
 			request: &FileTransferPermission{
-				AllowFileUpload:   true,
-				AllowFileDownload: false,
+				AllowFileUpload:   boolPtr(true),
+				AllowFileDownload: boolPtr(false),
 				AllowedPaths:      []string{"/home/deploy"},
 				BlockedExtensions: []string{".exe"},
 				MaxFileSize:       int64Ptr(10485760),
 			},
 			responseStatus: http.StatusOK,
 			responseBody: &FileTransferPermission{
-				AllowFileUpload:   true,
-				AllowFileDownload: false,
+				AllowFileUpload:   boolPtr(true),
+				AllowFileDownload: boolPtr(false),
 				AllowedPaths:      []string{"/home/deploy"},
 				BlockedExtensions: []string{".exe"},
 				MaxFileSize:       int64Ptr(10485760),
@@ -143,17 +143,17 @@ func TestUpdateTargetRoleFileTransferPermission(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:     "successful update to defaults",
+			name:     "successful update to inherit",
 			targetID: "target-123",
 			roleID:   "role-456",
 			request: &FileTransferPermission{
-				AllowFileUpload:   true,
-				AllowFileDownload: true,
+				AllowFileUpload:   nil, // inherit
+				AllowFileDownload: nil, // inherit
 			},
 			responseStatus: http.StatusOK,
 			responseBody: &FileTransferPermission{
-				AllowFileUpload:   true,
-				AllowFileDownload: true,
+				AllowFileUpload:   nil,
+				AllowFileDownload: nil,
 			},
 			wantErr: false,
 		},
@@ -162,8 +162,8 @@ func TestUpdateTargetRoleFileTransferPermission(t *testing.T) {
 			targetID: "target-123",
 			roleID:   "role-456",
 			request: &FileTransferPermission{
-				AllowFileUpload:   true,
-				AllowFileDownload: true,
+				AllowFileUpload:   boolPtr(true),
+				AllowFileDownload: boolPtr(true),
 			},
 			responseStatus: http.StatusNotFound,
 			wantErr:        true,
@@ -187,11 +187,11 @@ func TestUpdateTargetRoleFileTransferPermission(t *testing.T) {
 					t.Errorf("failed to decode request body: %v", err)
 				}
 
-				if reqBody.AllowFileUpload != tt.request.AllowFileUpload {
-					t.Errorf("request AllowFileUpload = %v, want %v", reqBody.AllowFileUpload, tt.request.AllowFileUpload)
+				if !compareBoolPtrs(reqBody.AllowFileUpload, tt.request.AllowFileUpload) {
+					t.Errorf("request AllowFileUpload = %v, want %v", ptrToStr(reqBody.AllowFileUpload), ptrToStr(tt.request.AllowFileUpload))
 				}
-				if reqBody.AllowFileDownload != tt.request.AllowFileDownload {
-					t.Errorf("request AllowFileDownload = %v, want %v", reqBody.AllowFileDownload, tt.request.AllowFileDownload)
+				if !compareBoolPtrs(reqBody.AllowFileDownload, tt.request.AllowFileDownload) {
+					t.Errorf("request AllowFileDownload = %v, want %v", ptrToStr(reqBody.AllowFileDownload), ptrToStr(tt.request.AllowFileDownload))
 				}
 
 				w.WriteHeader(tt.responseStatus)
@@ -222,17 +222,41 @@ func TestUpdateTargetRoleFileTransferPermission(t *testing.T) {
 			}
 
 			if result != nil && tt.responseBody != nil {
-				if result.AllowFileUpload != tt.responseBody.AllowFileUpload {
-					t.Errorf("AllowFileUpload = %v, want %v", result.AllowFileUpload, tt.responseBody.AllowFileUpload)
+				if !compareBoolPtrs(result.AllowFileUpload, tt.responseBody.AllowFileUpload) {
+					t.Errorf("AllowFileUpload = %v, want %v", ptrToStr(result.AllowFileUpload), ptrToStr(tt.responseBody.AllowFileUpload))
 				}
-				if result.AllowFileDownload != tt.responseBody.AllowFileDownload {
-					t.Errorf("AllowFileDownload = %v, want %v", result.AllowFileDownload, tt.responseBody.AllowFileDownload)
+				if !compareBoolPtrs(result.AllowFileDownload, tt.responseBody.AllowFileDownload) {
+					t.Errorf("AllowFileDownload = %v, want %v", ptrToStr(result.AllowFileDownload), ptrToStr(tt.responseBody.AllowFileDownload))
 				}
 			}
 		})
 	}
 }
 
+func compareBoolPtrs(a, b *bool) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func ptrToStr(p *bool) string {
+	if p == nil {
+		return "nil"
+	}
+	if *p {
+		return "true"
+	}
+	return "false"
+}
+
 func int64Ptr(i int64) *int64 {
 	return &i
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
