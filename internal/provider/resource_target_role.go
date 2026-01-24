@@ -43,30 +43,16 @@ func resourceTargetRole() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"allow_upload": {
-							Type:        schema.TypeString,
+							Type:        schema.TypeBool,
 							Optional:    true,
-							Default:     "inherit",
-							Description: "Allow file uploads via SCP/SFTP. Values: 'inherit' (from role), 'true', 'false'",
-							ValidateFunc: func(i interface{}, k string) (ws []string, errors []error) {
-								v := i.(string)
-								if v != "inherit" && v != "true" && v != "false" {
-									errors = append(errors, fmt.Errorf("%q must be 'inherit', 'true', or 'false', got: %s", k, v))
-								}
-								return ws, errors
-							},
+							Default:     true,
+							Description: "Allow file uploads via SCP/SFTP",
 						},
 						"allow_download": {
-							Type:        schema.TypeString,
+							Type:        schema.TypeBool,
 							Optional:    true,
-							Default:     "inherit",
-							Description: "Allow file downloads via SCP/SFTP. Values: 'inherit' (from role), 'true', 'false'",
-							ValidateFunc: func(i interface{}, k string) (ws []string, errors []error) {
-								v := i.(string)
-								if v != "inherit" && v != "true" && v != "false" {
-									errors = append(errors, fmt.Errorf("%q must be 'inherit', 'true', or 'false', got: %s", k, v))
-								}
-								return ws, errors
-							},
+							Default:     true,
+							Description: "Allow file downloads via SCP/SFTP",
 						},
 						"allowed_paths": {
 							Type:        schema.TypeList,
@@ -205,28 +191,9 @@ func resourceTargetRoleRead(ctx context.Context, d *schema.ResourceData, meta an
 	}
 
 	if ftPerm != nil {
-		// Convert nullable bools to string representation
-		allowUpload := "inherit"
-		if ftPerm.AllowFileUpload != nil {
-			if *ftPerm.AllowFileUpload {
-				allowUpload = "true"
-			} else {
-				allowUpload = "false"
-			}
-		}
-
-		allowDownload := "inherit"
-		if ftPerm.AllowFileDownload != nil {
-			if *ftPerm.AllowFileDownload {
-				allowDownload = "true"
-			} else {
-				allowDownload = "false"
-			}
-		}
-
 		ftBlock := map[string]any{
-			"allow_upload":   allowUpload,
-			"allow_download": allowDownload,
+			"allow_upload":   ftPerm.AllowFileUpload,
+			"allow_download": ftPerm.AllowFileDownload,
 		}
 
 		if ftPerm.AllowedPaths != nil {
@@ -247,7 +214,7 @@ func resourceTargetRoleRead(ctx context.Context, d *schema.ResourceData, meta an
 			if err := d.Set("file_transfer", []any{ftBlock}); err != nil {
 				return diag.FromErr(fmt.Errorf("failed to set file_transfer: %w", err))
 			}
-		} else if allowUpload != "inherit" || allowDownload != "inherit" ||
+		} else if !ftPerm.AllowFileUpload || !ftPerm.AllowFileDownload ||
 			ftPerm.AllowedPaths != nil || ftPerm.BlockedExtensions != nil || ftPerm.MaxFileSize != nil {
 			// Non-default values exist, show them
 			if err := d.Set("file_transfer", []any{ftBlock}); err != nil {
@@ -283,10 +250,10 @@ func resourceTargetRoleUpdate(ctx context.Context, d *schema.ResourceData, meta 
 				return diag.FromErr(fmt.Errorf("failed to update file transfer permissions: %w", err))
 			}
 		} else {
-			// file_transfer block was removed, reset to inherit from role defaults
+			// file_transfer block was removed, reset to defaults
 			perm := &client.FileTransferPermission{
-				AllowFileUpload:   nil, // inherit from role
-				AllowFileDownload: nil, // inherit from role
+				AllowFileUpload:   true,
+				AllowFileDownload: true,
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
@@ -323,36 +290,18 @@ func resourceTargetRoleDelete(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 // buildFileTransferPermission constructs a FileTransferPermission from the Terraform schema.
-// The new inheritance model uses nullable bools: nil = inherit from role, true/false = explicit override.
 func buildFileTransferPermission(opts map[string]any) *client.FileTransferPermission {
-	perm := &client.FileTransferPermission{}
-
-	// Parse allow_upload: "inherit" -> nil, "true" -> true, "false" -> false
-	if v, ok := opts["allow_upload"].(string); ok {
-		switch v {
-		case "true":
-			t := true
-			perm.AllowFileUpload = &t
-		case "false":
-			f := false
-			perm.AllowFileUpload = &f
-		default: // "inherit" or empty
-			perm.AllowFileUpload = nil
-		}
+	perm := &client.FileTransferPermission{
+		AllowFileUpload:   true, // default
+		AllowFileDownload: true, // default
 	}
 
-	// Parse allow_download: "inherit" -> nil, "true" -> true, "false" -> false
-	if v, ok := opts["allow_download"].(string); ok {
-		switch v {
-		case "true":
-			t := true
-			perm.AllowFileDownload = &t
-		case "false":
-			f := false
-			perm.AllowFileDownload = &f
-		default: // "inherit" or empty
-			perm.AllowFileDownload = nil
-		}
+	if v, ok := opts["allow_upload"]; ok {
+		perm.AllowFileUpload = v.(bool)
+	}
+
+	if v, ok := opts["allow_download"]; ok {
+		perm.AllowFileDownload = v.(bool)
 	}
 
 	if v, ok := opts["allowed_paths"]; ok {
