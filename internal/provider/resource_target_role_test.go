@@ -13,31 +13,31 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		expected *client.FileTransferPermission
 	}{
 		{
-			name: "all fields set with explicit deny",
+			name: "all fields set",
 			opts: map[string]any{
-				"allow_upload":       "false",
-				"allow_download":     "false",
+				"allow_upload":       false,
+				"allow_download":     false,
 				"allowed_paths":      []any{"/home/deploy", "/var/log"},
 				"blocked_extensions": []any{".exe", ".sh"},
 				"max_file_size":      10485760,
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   boolPtr(false),
-				AllowFileDownload: boolPtr(false),
+				AllowFileUpload:   false,
+				AllowFileDownload: false,
 				AllowedPaths:      []string{"/home/deploy", "/var/log"},
 				BlockedExtensions: []string{".exe", ".sh"},
 				MaxFileSize:       int64Ptr(10485760),
 			},
 		},
 		{
-			name: "inherit (nil) permissions",
+			name: "defaults only",
 			opts: map[string]any{
-				"allow_upload":   "inherit",
-				"allow_download": "inherit",
+				"allow_upload":   true,
+				"allow_download": true,
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   nil,
-				AllowFileDownload: nil,
+				AllowFileUpload:   true,
+				AllowFileDownload: true,
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
@@ -46,12 +46,12 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		{
 			name: "upload only",
 			opts: map[string]any{
-				"allow_upload":   "true",
-				"allow_download": "false",
+				"allow_upload":   true,
+				"allow_download": false,
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   boolPtr(true),
-				AllowFileDownload: boolPtr(false),
+				AllowFileUpload:   true,
+				AllowFileDownload: false,
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
@@ -60,12 +60,12 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		{
 			name: "download only",
 			opts: map[string]any{
-				"allow_upload":   "false",
-				"allow_download": "true",
+				"allow_upload":   false,
+				"allow_download": true,
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   boolPtr(false),
-				AllowFileDownload: boolPtr(true),
+				AllowFileUpload:   false,
+				AllowFileDownload: true,
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
@@ -74,13 +74,13 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		{
 			name: "with path restrictions",
 			opts: map[string]any{
-				"allow_upload":   "true",
-				"allow_download": "true",
+				"allow_upload":   true,
+				"allow_download": true,
 				"allowed_paths":  []any{"/home/user"},
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   boolPtr(true),
-				AllowFileDownload: boolPtr(true),
+				AllowFileUpload:   true,
+				AllowFileDownload: true,
 				AllowedPaths:      []string{"/home/user"},
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
@@ -89,13 +89,13 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		{
 			name: "with extension restrictions",
 			opts: map[string]any{
-				"allow_upload":       "true",
-				"allow_download":     "true",
+				"allow_upload":       true,
+				"allow_download":     true,
 				"blocked_extensions": []any{".sql", ".dump"},
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   boolPtr(true),
-				AllowFileDownload: boolPtr(true),
+				AllowFileUpload:   true,
+				AllowFileDownload: true,
 				AllowedPaths:      nil,
 				BlockedExtensions: []string{".sql", ".dump"},
 				MaxFileSize:       nil,
@@ -104,13 +104,13 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		{
 			name: "with size limit",
 			opts: map[string]any{
-				"allow_upload":   "true",
-				"allow_download": "true",
+				"allow_upload":   true,
+				"allow_download": true,
 				"max_file_size":  52428800,
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   boolPtr(true),
-				AllowFileDownload: boolPtr(true),
+				AllowFileUpload:   true,
+				AllowFileDownload: true,
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       int64Ptr(52428800),
@@ -119,15 +119,15 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		{
 			name: "empty paths and extensions",
 			opts: map[string]any{
-				"allow_upload":       "true",
-				"allow_download":     "true",
+				"allow_upload":       true,
+				"allow_download":     true,
 				"allowed_paths":      []any{},
 				"blocked_extensions": []any{},
 				"max_file_size":      0,
 			},
 			expected: &client.FileTransferPermission{
-				AllowFileUpload:   boolPtr(true),
-				AllowFileDownload: boolPtr(true),
+				AllowFileUpload:   true,
+				AllowFileDownload: true,
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
@@ -139,12 +139,12 @@ func TestBuildFileTransferPermission(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := buildFileTransferPermission(tt.opts)
 
-			if !boolPtrEqual(result.AllowFileUpload, tt.expected.AllowFileUpload) {
-				t.Errorf("AllowFileUpload = %v, want %v", boolPtrToString(result.AllowFileUpload), boolPtrToString(tt.expected.AllowFileUpload))
+			if result.AllowFileUpload != tt.expected.AllowFileUpload {
+				t.Errorf("AllowFileUpload = %v, want %v", result.AllowFileUpload, tt.expected.AllowFileUpload)
 			}
 
-			if !boolPtrEqual(result.AllowFileDownload, tt.expected.AllowFileDownload) {
-				t.Errorf("AllowFileDownload = %v, want %v", boolPtrToString(result.AllowFileDownload), boolPtrToString(tt.expected.AllowFileDownload))
+			if result.AllowFileDownload != tt.expected.AllowFileDownload {
+				t.Errorf("AllowFileDownload = %v, want %v", result.AllowFileDownload, tt.expected.AllowFileDownload)
 			}
 
 			if !stringSliceEqual(result.AllowedPaths, tt.expected.AllowedPaths) {
@@ -156,23 +156,23 @@ func TestBuildFileTransferPermission(t *testing.T) {
 			}
 
 			if !int64PtrEqual(result.MaxFileSize, tt.expected.MaxFileSize) {
-				t.Errorf("MaxFileSize = %v, want %v", int64PtrToString(result.MaxFileSize), int64PtrToString(tt.expected.MaxFileSize))
+				t.Errorf("MaxFileSize = %v, want %v", ptrToString(result.MaxFileSize), ptrToString(tt.expected.MaxFileSize))
 			}
 		})
 	}
 }
 
 func TestBuildFileTransferPermission_MissingFields(t *testing.T) {
-	// Test with empty map - should default to "inherit" (nil)
+	// Test with empty map - should use defaults
 	opts := map[string]any{}
 	result := buildFileTransferPermission(opts)
 
-	if result.AllowFileUpload != nil {
-		t.Errorf("AllowFileUpload = %v, want nil (inherit)", boolPtrToString(result.AllowFileUpload))
+	if result.AllowFileUpload != true {
+		t.Errorf("AllowFileUpload = %v, want true (default)", result.AllowFileUpload)
 	}
 
-	if result.AllowFileDownload != nil {
-		t.Errorf("AllowFileDownload = %v, want nil (inherit)", boolPtrToString(result.AllowFileDownload))
+	if result.AllowFileDownload != true {
+		t.Errorf("AllowFileDownload = %v, want true (default)", result.AllowFileDownload)
 	}
 
 	if result.AllowedPaths != nil {
@@ -202,22 +202,8 @@ func stringSliceEqual(a, b []string) bool {
 	return true
 }
 
-func boolPtr(b bool) *bool {
-	return &b
-}
-
 func int64Ptr(i int64) *int64 {
 	return &i
-}
-
-func boolPtrEqual(a, b *bool) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
 }
 
 func int64PtrEqual(a, b *int64) bool {
@@ -230,17 +216,7 @@ func int64PtrEqual(a, b *int64) bool {
 	return *a == *b
 }
 
-func boolPtrToString(p *bool) string {
-	if p == nil {
-		return "nil"
-	}
-	if *p {
-		return "true"
-	}
-	return "false"
-}
-
-func int64PtrToString(p *int64) string {
+func ptrToString(p *int64) string {
 	if p == nil {
 		return "nil"
 	}
