@@ -78,6 +78,7 @@ export WARPGATE_TOKEN="your-api-token"
 - `warpgate_role` - Retrieve information about a Warpgate role
 - `warpgate_user` - Retrieve information about a Warpgate user
 - `warpgate_target` - Retrieve information about a Warpgate target
+- `warpgate_ssh_own_keys` - Retrieve the Warpgate server's SSH host keys
 
 ## Example Usage
 
@@ -246,6 +247,18 @@ data "warpgate_role" "existing_role" {
 
 data "warpgate_target" "existing_target" {
   id = "existing-target-id"
+}
+
+# Retrieve the Warpgate server's SSH host keys
+data "warpgate_ssh_own_keys" "server_keys" {}
+
+output "ssh_host_keys" {
+  value = data.warpgate_ssh_own_keys.server_keys.keys
+}
+
+# Get a specific key type (e.g., Ed25519)
+output "ed25519_key" {
+  value = [for k in data.warpgate_ssh_own_keys.server_keys.keys : k.public_key_base64 if k.kind == "Ed25519"][0]
 }
 ```
 

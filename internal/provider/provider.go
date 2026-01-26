@@ -51,9 +51,10 @@ func New(version string) func() *schema.Provider {
 				"warpgate_ticket":                resourceTicket(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
-				"warpgate_role":   dataSourceRole(),
-				"warpgate_user":   dataSourceUser(),
-				"warpgate_target": dataSourceTarget(),
+				"warpgate_role":         dataSourceRole(),
+				"warpgate_user":         dataSourceUser(),
+				"warpgate_target":       dataSourceTarget(),
+				"warpgate_ssh_own_keys": dataSourceSSHOwnKeys(),
 			},
 		}
 
