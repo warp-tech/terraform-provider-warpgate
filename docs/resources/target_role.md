@@ -9,7 +9,7 @@ description: |-
 
 Creates an association between a target and a role in WarpGate. This relationship makes the target accessible to users who have the same role assigned.
 
-For SSH targets, you can also configure file transfer (SCP/SFTP) permissions using the `file_transfer` block.
+For SSH targets, you can also configure file transfer (SFTP) permissions using the `file_transfer` block.
 
 ## Example Usage
 
@@ -198,14 +198,14 @@ The following arguments are supported:
 
 * `target_id` - (Required) The ID of the target to assign the role to.
 * `role_id` - (Required) The ID of the role to assign.
-* `file_transfer` - (Optional) File transfer (SCP/SFTP) permission settings. **Only applicable for SSH targets.** See [File Transfer](#file-transfer) below.
+* `file_transfer` - (Optional) File transfer (SFTP) permission settings. **Only applicable for SSH targets.** See [File Transfer](#file-transfer) below.
 
 ### File Transfer
 
 The `file_transfer` block supports the following arguments:
 
-* `allow_upload` - (Optional) Allow file uploads via SCP/SFTP. Defaults to `true`.
-* `allow_download` - (Optional) Allow file downloads via SCP/SFTP. Defaults to `true`.
+* `allow_upload` - (Optional) Allow file uploads via SFTP. Defaults to `true`.
+* `allow_download` - (Optional) Allow file downloads via SFTP. Defaults to `true`.
 * `allowed_paths` - (Optional) List of allowed paths for file transfers. If not specified, all paths are allowed.
 * `blocked_extensions` - (Optional) List of blocked file extensions (e.g., `[".exe", ".sh"]`). If not specified, no extensions are blocked.
 * `max_file_size` - (Optional) Maximum file size in bytes. If not specified, no size limit is enforced.
@@ -236,7 +236,7 @@ $ terraform import warpgate_target_role.developers_web_access 12345678-1234-1234
 
 ### Optional
 
-- `file_transfer` (Block List, Max: 1) File transfer (SCP/SFTP) permissions. Only applicable for SSH targets. (see [below for nested schema](#nestedblock--file_transfer))
+- `file_transfer` (Block List, Max: 1) File transfer (SFTP) permissions. Only applicable for SSH targets. (see [below for nested schema](#nestedblock--file_transfer))
 
 ### Read-Only
 
@@ -247,8 +247,8 @@ $ terraform import warpgate_target_role.developers_web_access 12345678-1234-1234
 
 Optional:
 
-- `allow_download` (Boolean) Allow file downloads via SCP/SFTP. Defaults to `true`.
-- `allow_upload` (Boolean) Allow file uploads via SCP/SFTP. Defaults to `true`.
+- `allow_download` (Boolean) Allow file downloads via SFTP. Defaults to `true`.
+- `allow_upload` (Boolean) Allow file uploads via SFTP. Defaults to `true`.
 - `allowed_paths` (List of String) Allowed paths for file transfers (null = all paths allowed).
 - `blocked_extensions` (List of String) Blocked file extensions (null = no extensions blocked).
 - `max_file_size` (Number) Maximum file size in bytes (null = no limit).

@@ -38,20 +38,20 @@ func resourceRole() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				MaxItems:    1,
-				Description: "Default file transfer (SCP/SFTP) permissions for this role. Target-role assignments inherit these unless explicitly overridden.",
+				Description: "Default file transfer (SFTP) permissions for this role. Target-role assignments inherit these unless explicitly overridden.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"allow_upload": {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     true,
-							Description: "Default permission for file uploads via SCP/SFTP",
+							Description: "Default permission for file uploads via SFTP",
 						},
 						"allow_download": {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     true,
-							Description: "Default permission for file downloads via SCP/SFTP",
+							Description: "Default permission for file downloads via SFTP",
 						},
 						"allowed_paths": {
 							Type:        schema.TypeList,

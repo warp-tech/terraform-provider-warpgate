@@ -39,14 +39,14 @@ func resourceTargetRole() *schema.Resource {
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Description: "File transfer (SCP/SFTP) permissions. Only applicable for SSH targets.",
+				Description: "File transfer (SFTP) permissions. Only applicable for SSH targets.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"allow_upload": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Default:     "inherit",
-							Description: "Allow file uploads via SCP/SFTP. Values: 'inherit' (from role), 'true', 'false'",
+							Description: "Allow file uploads via SFTP. Values: 'inherit' (from role), 'true', 'false'",
 							ValidateFunc: func(i interface{}, k string) (ws []string, errors []error) {
 								v := i.(string)
 								if v != "inherit" && v != "true" && v != "false" {
@@ -59,7 +59,7 @@ func resourceTargetRole() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Default:     "inherit",
-							Description: "Allow file downloads via SCP/SFTP. Values: 'inherit' (from role), 'true', 'false'",
+							Description: "Allow file downloads via SFTP. Values: 'inherit' (from role), 'true', 'false'",
 							ValidateFunc: func(i interface{}, k string) (ws []string, errors []error) {
 								v := i.(string)
 								if v != "inherit" && v != "true" && v != "false" {
