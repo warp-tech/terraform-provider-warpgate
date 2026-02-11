@@ -74,6 +74,12 @@ func resourceRole() *schema.Resource {
 							Optional:    true,
 							Description: "Default maximum file size in bytes (null = no limit)",
 						},
+						"file_transfer_only": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "When true, users with this role can only use SFTP file transfers. Shell, exec, and port forwarding are blocked.",
+						},
 					},
 				},
 			},
@@ -153,8 +159,9 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, meta any) dia
 
 	if ftDefaults != nil {
 		ftBlock := map[string]any{
-			"allow_upload":   ftDefaults.AllowFileUpload,
-			"allow_download": ftDefaults.AllowFileDownload,
+			"allow_upload":       ftDefaults.AllowFileUpload,
+			"allow_download":     ftDefaults.AllowFileDownload,
+			"file_transfer_only": ftDefaults.FileTransferOnly,
 		}
 
 		if ftDefaults.AllowedPaths != nil {
@@ -175,7 +182,8 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, meta any) dia
 				return diag.FromErr(fmt.Errorf("failed to set file_transfer_defaults: %w", err))
 			}
 		} else if !ftDefaults.AllowFileUpload || !ftDefaults.AllowFileDownload ||
-			ftDefaults.AllowedPaths != nil || ftDefaults.BlockedExtensions != nil || ftDefaults.MaxFileSize != nil {
+			ftDefaults.AllowedPaths != nil || ftDefaults.BlockedExtensions != nil ||
+			ftDefaults.MaxFileSize != nil || ftDefaults.FileTransferOnly {
 			// Non-default values exist, show them
 			if err := d.Set("file_transfer_defaults", []any{ftBlock}); err != nil {
 				return diag.FromErr(fmt.Errorf("failed to set file_transfer_defaults: %w", err))
@@ -228,6 +236,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, meta any) d
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
+				FileTransferOnly:  false,
 			}
 
 			_, err := c.UpdateRoleFileTransferDefaults(ctx, id, defaults)
@@ -297,6 +306,10 @@ func buildRoleFileTransferDefaults(opts map[string]any) *client.RoleFileTransfer
 	if v, ok := opts["max_file_size"]; ok && v.(int) > 0 {
 		size := int64(v.(int))
 		defaults.MaxFileSize = &size
+	}
+
+	if v, ok := opts["file_transfer_only"]; ok {
+		defaults.FileTransferOnly = v.(bool)
 	}
 
 	return defaults

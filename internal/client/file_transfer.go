@@ -17,6 +17,7 @@ type FileTransferPermission struct {
 	AllowedPaths      []string `json:"allowed_paths,omitempty"`
 	BlockedExtensions []string `json:"blocked_extensions,omitempty"`
 	MaxFileSize       *int64   `json:"max_file_size,omitempty"`
+	FileTransferOnly  *bool    `json:"file_transfer_only,omitempty"`
 }
 
 // RoleFileTransferDefaults represents file transfer permission defaults for a role.
@@ -27,6 +28,7 @@ type RoleFileTransferDefaults struct {
 	AllowedPaths      []string `json:"allowed_paths,omitempty"`
 	BlockedExtensions []string `json:"blocked_extensions,omitempty"`
 	MaxFileSize       *int64   `json:"max_file_size,omitempty"`
+	FileTransferOnly  bool     `json:"file_transfer_only"`
 }
 
 // GetTargetRoleFileTransferPermission retrieves file transfer permissions for a target-role assignment.

@@ -84,6 +84,19 @@ resource "warpgate_target_role" "readonly_access" {
 }
 ```
 
+### SFTP-Only Access (Override per Target)
+
+```hcl
+resource "warpgate_target_role" "sftp_only_access" {
+  target_id = warpgate_target.file_server.id
+  role_id   = warpgate_role.developers.id
+
+  file_transfer {
+    file_transfer_only = true  # Blocks shell/exec/forwarding for this target
+  }
+}
+```
+
 ## Complete Access Control Example
 
 This example demonstrates a complete access control setup with users, roles, targets, and their relationships:
@@ -209,6 +222,7 @@ The `file_transfer` block supports the following arguments:
 * `allowed_paths` - (Optional) List of allowed paths for file transfers. If not specified, all paths are allowed.
 * `blocked_extensions` - (Optional) List of blocked file extensions (e.g., `[".exe", ".sh"]`). If not specified, no extensions are blocked.
 * `max_file_size` - (Optional) Maximum file size in bytes. If not specified, no size limit is enforced.
+* `file_transfer_only` - (Optional) When `true`, blocks shell, exec, and port forwarding — only SFTP is allowed. Values: `"inherit"` (from role default), `"true"`, `"false"`. Defaults to `"inherit"`.
 
 ~> **Note:** The `file_transfer` block is only applicable for SSH targets. Setting it on non-SSH targets (HTTP, MySQL, PostgreSQL) will result in an error.
 

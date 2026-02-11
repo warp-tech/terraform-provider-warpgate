@@ -89,6 +89,19 @@ func resourceTargetRole() *schema.Resource {
 							Optional:    true,
 							Description: "Maximum file size in bytes (null = no limit)",
 						},
+						"file_transfer_only": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "inherit",
+							Description: "File transfer only mode — blocks shell/exec/forwarding. Values: 'inherit' (from role), 'true', 'false'",
+							ValidateFunc: func(i interface{}, k string) (ws []string, errors []error) {
+								v := i.(string)
+								if v != "inherit" && v != "true" && v != "false" {
+									errors = append(errors, fmt.Errorf("%q must be 'inherit', 'true', or 'false', got: %s", k, v))
+								}
+								return ws, errors
+							},
+						},
 					},
 				},
 			},
@@ -224,9 +237,19 @@ func resourceTargetRoleRead(ctx context.Context, d *schema.ResourceData, meta an
 			}
 		}
 
+		fileTransferOnly := "inherit"
+		if ftPerm.FileTransferOnly != nil {
+			if *ftPerm.FileTransferOnly {
+				fileTransferOnly = "true"
+			} else {
+				fileTransferOnly = "false"
+			}
+		}
+
 		ftBlock := map[string]any{
-			"allow_upload":   allowUpload,
-			"allow_download": allowDownload,
+			"allow_upload":       allowUpload,
+			"allow_download":     allowDownload,
+			"file_transfer_only": fileTransferOnly,
 		}
 
 		if ftPerm.AllowedPaths != nil {
@@ -248,7 +271,8 @@ func resourceTargetRoleRead(ctx context.Context, d *schema.ResourceData, meta an
 				return diag.FromErr(fmt.Errorf("failed to set file_transfer: %w", err))
 			}
 		} else if allowUpload != "inherit" || allowDownload != "inherit" ||
-			ftPerm.AllowedPaths != nil || ftPerm.BlockedExtensions != nil || ftPerm.MaxFileSize != nil {
+			ftPerm.AllowedPaths != nil || ftPerm.BlockedExtensions != nil ||
+			ftPerm.MaxFileSize != nil || fileTransferOnly != "inherit" {
 			// Non-default values exist, show them
 			if err := d.Set("file_transfer", []any{ftBlock}); err != nil {
 				return diag.FromErr(fmt.Errorf("failed to set file_transfer: %w", err))
@@ -290,6 +314,7 @@ func resourceTargetRoleUpdate(ctx context.Context, d *schema.ResourceData, meta 
 				AllowedPaths:      nil,
 				BlockedExtensions: nil,
 				MaxFileSize:       nil,
+				FileTransferOnly:  nil, // inherit from role
 			}
 
 			_, err := c.UpdateTargetRoleFileTransferPermission(ctx, targetID, roleID, perm)
@@ -378,6 +403,20 @@ func buildFileTransferPermission(opts map[string]any) *client.FileTransferPermis
 	if v, ok := opts["max_file_size"]; ok && v.(int) > 0 {
 		size := int64(v.(int))
 		perm.MaxFileSize = &size
+	}
+
+	// Parse file_transfer_only: "inherit" -> nil, "true" -> true, "false" -> false
+	if v, ok := opts["file_transfer_only"].(string); ok {
+		switch v {
+		case "true":
+			t := true
+			perm.FileTransferOnly = &t
+		case "false":
+			f := false
+			perm.FileTransferOnly = &f
+		default: // "inherit" or empty
+			perm.FileTransferOnly = nil
+		}
 	}
 
 	return perm
