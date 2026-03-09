@@ -17,17 +17,31 @@ install: build
 # Generate documentation
 .PHONY: docs
 docs:
-	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name warpgate
 
 # Format Go code
 .PHONY: fmt
 fmt:
 	go fmt ./...
 
+# Vet the code
+.PHONY: vet
+vet:
+	go vet ./...
+
 # Lint the code
 .PHONY: lint
 lint:
 	golangci-lint run ./...
+
+# Run tests
+.PHONY: test
+test:
+	go test -v ./...
+
+# Run all CI checks (build, vet, lint, test)
+.PHONY: ci
+ci: build vet lint test
 
 # Clean build artifacts
 .PHONY: clean
