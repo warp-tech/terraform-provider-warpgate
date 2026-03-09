@@ -122,7 +122,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body any) (
 // handleResponse processes the API response, checking for errors and unmarshaling
 // the response body into the provided result object if applicable.
 func handleResponse(resp *http.Response, result any) error {
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		body, err := io.ReadAll(resp.Body)
