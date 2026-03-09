@@ -21,6 +21,16 @@ resource "warpgate_role" "admins" {
   name        = "administrators"
   description = "Role for system administrators with full access"
 }
+
+# SFTP-only role: users can transfer files but cannot run shell/exec/forwarding
+resource "warpgate_role" "sftp_only" {
+  name        = "sftp-only"
+  description = "File transfer only - no shell access"
+
+  file_transfer_defaults {
+    file_transfer_only = true
+  }
+}
 ```
 
 ## Argument Reference
