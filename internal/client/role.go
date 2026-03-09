@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // Role represents a Warpgate role
@@ -24,14 +25,11 @@ type RoleCreateRequest struct {
 // the provided search term.
 func (c *Client) GetRoles(ctx context.Context, search string) ([]Role, error) {
 	path := "/roles"
-
-	req, err := http.NewRequest(http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
+	if search != "" {
+		path = fmt.Sprintf("/roles?search=%s", url.QueryEscape(search))
 	}
-	req.URL.Query().Add("search", search)
 
-	resp, err := c.doRequest(ctx, http.MethodGet, req.URL.Path, nil)
+	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +51,7 @@ func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, nil
 	}
 

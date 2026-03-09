@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // TLSMode represents the TLS mode for a target
@@ -103,13 +104,11 @@ type TargetDataRequest struct {
 // the provided search term.
 func (c *Client) GetTargets(ctx context.Context, search string) ([]Target, error) {
 	path := "/targets"
-	req, err := http.NewRequest(http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
+	if search != "" {
+		path = fmt.Sprintf("/targets?search=%s", url.QueryEscape(search))
 	}
-	req.URL.Query().Add("search", search)
 
-	resp, err := c.doRequest(ctx, http.MethodGet, req.URL.Path, nil)
+	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +130,7 @@ func (c *Client) GetTarget(ctx context.Context, id string) (*Target, error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, nil
 	}
 
