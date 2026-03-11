@@ -52,7 +52,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"http_options", "mysql_options", "postgres_options"},
+				ConflictsWith: []string{"http_options", "mysql_options", "postgres_options", "kubernetes_options"},
 				Description:   "SSH target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -113,7 +113,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "mysql_options", "postgres_options"},
+				ConflictsWith: []string{"ssh_options", "mysql_options", "postgres_options", "kubernetes_options"},
 				Description:   "HTTP target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -165,7 +165,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "postgres_options"},
+				ConflictsWith: []string{"ssh_options", "http_options", "postgres_options", "kubernetes_options"},
 				Description:   "MySQL target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -219,7 +219,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options"},
+				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "kubernetes_options"},
 				Description:   "PostgreSQL target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -268,6 +268,84 @@ func resourceTarget() *schema.Resource {
 					},
 				},
 			},
+			// Kubernetes Target Configuration
+			"kubernetes_options": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "postgres_options"},
+				Description:   "Kubernetes target options",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cluster_url": {
+							Type:         schema.TypeString,
+							Required:     true,
+							Description:  "The Kubernetes cluster URL",
+							ValidateFunc: validation.IsURLWithHTTPorHTTPS,
+						},
+						"tls": {
+							Type:        schema.TypeList,
+							Required:    true,
+							MaxItems:    1,
+							Description: "TLS configuration",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"mode": {
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validation.StringInSlice([]string{"Disabled", "Preferred", "Required"}, false),
+										Description:  "TLS mode (Disabled, Preferred, Required)",
+									},
+									"verify": {
+										Type:        schema.TypeBool,
+										Required:    true,
+										Description: "Verify TLS certificates",
+									},
+								},
+							},
+						},
+						"token_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							MaxItems:      1,
+							ConflictsWith: []string{"kubernetes_options.0.certificate_auth"},
+							Description:   "Token authentication for Kubernetes",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"token": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Sensitive:   true,
+										Description: "The bearer token for Kubernetes authentication",
+									},
+								},
+							},
+						},
+						"certificate_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							MaxItems:      1,
+							ConflictsWith: []string{"kubernetes_options.0.token_auth"},
+							Description:   "Certificate authentication for Kubernetes",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"certificate": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The client certificate PEM",
+									},
+									"private_key": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Sensitive:   true,
+										Description: "The client private key PEM",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		CustomizeDiff: validateTargetConfig,
 	}
@@ -276,7 +354,7 @@ func resourceTarget() *schema.Resource {
 // validateTargetConfig validates the target configuration in a Terraform resource diff,
 // ensuring that exactly one type of target option is specified.
 func validateTargetConfig(ctx context.Context, d *schema.ResourceDiff, meta any) error {
-	optionBlocks := []string{"ssh_options", "http_options", "mysql_options", "postgres_options"}
+	optionBlocks := []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "kubernetes_options"}
 
 	count := 0
 	for _, block := range optionBlocks {
@@ -286,11 +364,11 @@ func validateTargetConfig(ctx context.Context, d *schema.ResourceDiff, meta any)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("one of ssh_options, http_options, mysql_options, or postgres_options must be specified")
+		return fmt.Errorf("one of ssh_options, http_options, mysql_options, postgres_options, or kubernetes_options must be specified")
 	}
 
 	if count > 1 {
-		return fmt.Errorf("only one of ssh_options, http_options, mysql_options, postgres_option can be specified")
+		return fmt.Errorf("only one of ssh_options, http_options, mysql_options, postgres_options, or kubernetes_options can be specified")
 	}
 
 	return nil
@@ -452,6 +530,12 @@ func buildTargetOptions(d *schema.ResourceData) (client.TargetOptions, error) {
 		return buildPostgresTargetOptions(pgOpts)
 	}
 
+	// Check for Kubernetes options
+	if v, ok := d.GetOk("kubernetes_options"); ok && len(v.([]any)) > 0 {
+		k8sOpts := v.([]any)[0].(map[string]any)
+		return buildKubernetesTargetOptions(k8sOpts)
+	}
+
 	return nil, fmt.Errorf("no target options specified")
 }
 
@@ -591,6 +675,51 @@ func buildPostgresTargetOptions(opts map[string]any) (*client.TargetPostgresOpti
 	}, nil
 }
 
+// buildKubernetesTargetOptions creates Kubernetes target options from the resource data map.
+func buildKubernetesTargetOptions(opts map[string]any) (*client.TargetKubernetesOptions, error) {
+	clusterURL := opts["cluster_url"].(string)
+
+	// Extract TLS settings
+	var tls client.TLS
+	if v, ok := opts["tls"]; ok {
+		var err error
+		tls, err = parseTLSConfig(v.([]any))
+		if err != nil {
+			return nil, fmt.Errorf("invalid TLS configuration for Kubernetes target: %w", err)
+		}
+	}
+
+	// Determine which auth method is being used
+	var auth client.KubernetesTargetAuth
+
+	if v, ok := opts["token_auth"]; ok && len(v.([]any)) > 0 {
+		tokenAuth := v.([]any)[0].(map[string]any)
+		token := tokenAuth["token"].(string)
+		auth = &client.KubernetesTargetTokenAuth{
+			Kind:  "Token",
+			Token: token,
+		}
+	} else if v, ok := opts["certificate_auth"]; ok && len(v.([]any)) > 0 {
+		certAuth := v.([]any)[0].(map[string]any)
+		certificate := certAuth["certificate"].(string)
+		privateKey := certAuth["private_key"].(string)
+		auth = &client.KubernetesTargetCertificateAuth{
+			Kind:        "Certificate",
+			Certificate: certificate,
+			PrivateKey:  privateKey,
+		}
+	} else {
+		return nil, fmt.Errorf("Kubernetes target requires either token_auth or certificate_auth")
+	}
+
+	return &client.TargetKubernetesOptions{
+		Kind:       "Kubernetes",
+		ClusterURL: clusterURL,
+		TLS:        tls,
+		Auth:       auth,
+	}, nil
+}
+
 // setTargetOptions populates the appropriate Terraform schema block based on the target type
 // from the Warpgate API.
 func setTargetOptions(d *schema.ResourceData, options any) error {
@@ -609,6 +738,10 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 
 	if err := d.Set("postgres_options", []any{}); err != nil {
 		return fmt.Errorf("failed to reset postgres_options: %w", err)
+	}
+
+	if err := d.Set("kubernetes_options", []any{}); err != nil {
+		return fmt.Errorf("failed to reset kubernetes_options: %w", err)
 	}
 
 	// Type assertion based on the "kind" field in the options map
@@ -732,6 +865,53 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 		}
 
 		return d.Set("postgres_options", []any{pgOpts})
+
+	case "Kubernetes":
+		tls, ok := optionsMap["tls"].(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid tls field in Kubernetes options")
+		}
+
+		tlsOpts := map[string]any{
+			"mode":   tls["mode"],
+			"verify": tls["verify"],
+		}
+
+		k8sOpts := map[string]any{
+			"cluster_url": optionsMap["cluster_url"],
+			"tls":         []any{tlsOpts},
+		}
+
+		// Handle auth block
+		auth, ok := optionsMap["auth"].(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid auth field in Kubernetes options")
+		}
+
+		authKind, ok := auth["kind"].(string)
+		if !ok {
+			return fmt.Errorf("missing 'kind' field in Kubernetes auth options")
+		}
+
+		switch authKind {
+		case "Token":
+			k8sOpts["token_auth"] = []any{
+				map[string]any{
+					"token": auth["token"],
+				},
+			}
+		case "Certificate":
+			k8sOpts["certificate_auth"] = []any{
+				map[string]any{
+					"certificate": auth["certificate"],
+					"private_key": auth["private_key"],
+				},
+			}
+		default:
+			return fmt.Errorf("unknown Kubernetes auth kind: %s", authKind)
+		}
+
+		return d.Set("kubernetes_options", []any{k8sOpts})
 
 	default:
 		return fmt.Errorf("unknown target kind: %s", kind)
