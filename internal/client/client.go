@@ -69,17 +69,26 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body any) (
 	var reqURL *url.URL
 
 	if strings.HasPrefix(path, "/") {
-		// Create a new URL that has the same scheme and host but combines the paths
+		// Split path and query parameters so query params end up in RawQuery,
+		// not percent-encoded inside the Path field.
+		pathPart := path
+		queryPart := ""
+		if idx := strings.IndexByte(path, '?'); idx >= 0 {
+			pathPart = path[:idx]
+			queryPart = path[idx+1:]
+		}
+
 		fullPath := c.baseURL.Path
 		if !strings.HasSuffix(fullPath, "/") {
 			fullPath += "/"
 		}
-		fullPath += strings.TrimPrefix(path, "/")
+		fullPath += strings.TrimPrefix(pathPart, "/")
 
 		reqURL = &url.URL{
-			Scheme: c.baseURL.Scheme,
-			Host:   c.baseURL.Host,
-			Path:   fullPath,
+			Scheme:   c.baseURL.Scheme,
+			Host:     c.baseURL.Host,
+			Path:     fullPath,
+			RawQuery: queryPart,
 		}
 	} else {
 		// Path doesn't start with slash, can use normal resolution
