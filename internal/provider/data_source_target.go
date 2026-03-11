@@ -248,6 +248,75 @@ func dataSourceTarget() *schema.Resource {
 					},
 				},
 			},
+			// Kubernetes Target Configuration
+			"kubernetes_options": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "Kubernetes target options",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cluster_url": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The Kubernetes cluster URL",
+						},
+						"tls": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "TLS configuration",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"mode": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "TLS mode (Disabled, Preferred, Required)",
+									},
+									"verify": {
+										Type:        schema.TypeBool,
+										Computed:    true,
+										Description: "Verify TLS certificates",
+									},
+								},
+							},
+						},
+						"token_auth": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "Token authentication for Kubernetes",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"token": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Sensitive:   true,
+										Description: "The bearer token for Kubernetes authentication",
+									},
+								},
+							},
+						},
+						"certificate_auth": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "Certificate authentication for Kubernetes",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"certificate": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "The client certificate PEM",
+									},
+									"private_key": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Sensitive:   true,
+										Description: "The client private key PEM",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

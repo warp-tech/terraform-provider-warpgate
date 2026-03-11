@@ -92,6 +92,30 @@ type TargetPostgresOptions struct {
 	TLS      TLS    `json:"tls"`
 }
 
+// KubernetesTargetAuth is a wrapper for the different Kubernetes authentication methods
+type KubernetesTargetAuth any
+
+// KubernetesTargetTokenAuth represents token authentication for Kubernetes targets
+type KubernetesTargetTokenAuth struct {
+	Kind  string `json:"kind"`
+	Token string `json:"token"`
+}
+
+// KubernetesTargetCertificateAuth represents certificate authentication for Kubernetes targets
+type KubernetesTargetCertificateAuth struct {
+	Kind        string `json:"kind"`
+	Certificate string `json:"certificate"`
+	PrivateKey  string `json:"private_key"`
+}
+
+// TargetKubernetesOptions represents options for Kubernetes targets
+type TargetKubernetesOptions struct {
+	Kind       string               `json:"kind"`
+	ClusterURL string               `json:"cluster_url"`
+	TLS        TLS                  `json:"tls"`
+	Auth       KubernetesTargetAuth `json:"auth"`
+}
+
 // TargetDataRequest is the request payload for creating/updating a target
 type TargetDataRequest struct {
 	Name        string        `json:"name"`
