@@ -40,16 +40,18 @@ You can inspect the configuration of a target based on its type. Only one of the
 ```hcl
 locals {
   # Determine target type
-  is_ssh      = length(data.warpgate_target.server.ssh_options) > 0
-  is_http     = length(data.warpgate_target.server.http_options) > 0
-  is_mysql    = length(data.warpgate_target.server.mysql_options) > 0
-  is_postgres = length(data.warpgate_target.server.postgres_options) > 0
+  is_ssh        = length(data.warpgate_target.server.ssh_options) > 0
+  is_http       = length(data.warpgate_target.server.http_options) > 0
+  is_mysql      = length(data.warpgate_target.server.mysql_options) > 0
+  is_postgres   = length(data.warpgate_target.server.postgres_options) > 0
+  is_kubernetes = length(data.warpgate_target.server.kubernetes_options) > 0
 
   # Safely access target details
   host = local.is_ssh ? data.warpgate_target.server.ssh_options[0].host :
          local.is_http ? "<HTTP target>" :
          local.is_mysql ? data.warpgate_target.server.mysql_options[0].host :
          local.is_postgres ? data.warpgate_target.server.postgres_options[0].host :
+         local.is_kubernetes ? data.warpgate_target.server.kubernetes_options[0].cluster_url :
          "unknown"
 }
 
@@ -58,6 +60,7 @@ output "target_type" {
           local.is_http ? "HTTP" :
           local.is_mysql ? "MySQL" :
           local.is_postgres ? "PostgreSQL" :
+          local.is_kubernetes ? "Kubernetes" :
           "unknown"
 }
 
@@ -120,5 +123,16 @@ Based on the target type, one of the following option blocks will be populated:
   - `tls` - TLS configuration.
     - `mode` - TLS mode (Disabled, Preferred, Required).
     - `verify` - Whether TLS certificates are verified.
+
+- `kubernetes_options` - Configuration for Kubernetes targets.
+  - `cluster_url` - The Kubernetes cluster URL.
+  - `tls` - TLS configuration.
+    - `mode` - TLS mode (Disabled, Preferred, Required).
+    - `verify` - Whether TLS certificates are verified.
+  - `token_auth` - Token authentication configuration (if applicable).
+    - `token` - The bearer token for Kubernetes authentication.
+  - `certificate_auth` - Certificate authentication configuration (if applicable).
+    - `certificate` - The client certificate PEM.
+    - `private_key` - The client private key PEM.
 
 {{ .SchemaMarkdown | trimspace }}
