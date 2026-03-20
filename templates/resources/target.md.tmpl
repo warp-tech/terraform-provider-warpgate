@@ -98,6 +98,49 @@ resource "warpgate_target" "postgres_db" {
 }
 ```
 
+### Kubernetes Target (Token Auth)
+
+```hcl
+resource "warpgate_target" "k8s_cluster" {
+  name        = "k8s-cluster"
+  description = "Production Kubernetes cluster"
+  
+  kubernetes_options {
+    cluster_url = "https://k8s.example.com:6443"
+    tls {
+      mode   = "Required"
+      verify = true
+    }
+    
+    token_auth {
+      token = "eyJhbGciOiJSUzI1NiIs..."
+    }
+  }
+}
+```
+
+### Kubernetes Target (Certificate Auth)
+
+```hcl
+resource "warpgate_target" "k8s_cluster_cert" {
+  name        = "k8s-cluster-cert"
+  description = "Kubernetes cluster with certificate auth"
+  
+  kubernetes_options {
+    cluster_url = "https://k8s.example.com:6443"
+    tls {
+      mode   = "Required"
+      verify = true
+    }
+    
+    certificate_auth {
+      certificate = file("client.crt")
+      private_key = file("client.key")
+    }
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:

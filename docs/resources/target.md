@@ -98,6 +98,49 @@ resource "warpgate_target" "postgres_db" {
 }
 ```
 
+### Kubernetes Target (Token Auth)
+
+```hcl
+resource "warpgate_target" "k8s_cluster" {
+  name        = "k8s-cluster"
+  description = "Production Kubernetes cluster"
+  
+  kubernetes_options {
+    cluster_url = "https://k8s.example.com:6443"
+    tls {
+      mode   = "Required"
+      verify = true
+    }
+    
+    token_auth {
+      token = "eyJhbGciOiJSUzI1NiIs..."
+    }
+  }
+}
+```
+
+### Kubernetes Target (Certificate Auth)
+
+```hcl
+resource "warpgate_target" "k8s_cluster_cert" {
+  name        = "k8s-cluster-cert"
+  description = "Kubernetes cluster with certificate auth"
+  
+  kubernetes_options {
+    cluster_url = "https://k8s.example.com:6443"
+    tls {
+      mode   = "Required"
+      verify = true
+    }
+    
+    certificate_auth {
+      certificate = file("client.crt")
+      private_key = file("client.key")
+    }
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -143,6 +186,17 @@ One of the following option blocks must be specified:
     * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
     * `verify` - (Required) Verify TLS certificates.
 
+* `kubernetes_options` - (Optional) Kubernetes target configuration block.
+  * `cluster_url` - (Required) The Kubernetes cluster URL.
+  * `tls` - (Required) TLS configuration block.
+    * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
+    * `verify` - (Required) Verify TLS certificates.
+  * `token_auth` - (Optional) Token authentication for Kubernetes. Conflicts with `certificate_auth`.
+    * `token` - (Required) The bearer token for Kubernetes authentication.
+  * `certificate_auth` - (Optional) Certificate authentication for Kubernetes. Conflicts with `token_auth`.
+    * `certificate` - (Required) The client certificate PEM.
+    * `private_key` - (Required) The client private key PEM.
+
 ## Attribute Reference
 
 In addition to all arguments above, the following attributes are exported:
@@ -170,6 +224,7 @@ $ terraform import warpgate_target.web_server 12345678-1234-1234-1234-1234567890
 - `description` (String) The description of the target
 - `group_id` (String) Which target group this target is assigned to
 - `http_options` (Block List, Max: 1) HTTP target options (see [below for nested schema](#nestedblock--http_options))
+- `kubernetes_options` (Block List, Max: 1) Kubernetes target options (see [below for nested schema](#nestedblock--kubernetes_options))
 - `mysql_options` (Block List, Max: 1) MySQL target options (see [below for nested schema](#nestedblock--mysql_options))
 - `postgres_options` (Block List, Max: 1) PostgreSQL target options (see [below for nested schema](#nestedblock--postgres_options))
 - `ssh_options` (Block List, Max: 1) SSH target options (see [below for nested schema](#nestedblock--ssh_options))
@@ -200,6 +255,43 @@ Required:
 - `mode` (String) TLS mode (Disabled, Preferred, Required)
 - `verify` (Boolean) Verify TLS certificates
 
+
+
+<a id="nestedblock--kubernetes_options"></a>
+### Nested Schema for `kubernetes_options`
+
+Required:
+
+- `cluster_url` (String) The Kubernetes cluster URL
+- `tls` (Block List, Min: 1, Max: 1) TLS configuration (see [below for nested schema](#nestedblock--kubernetes_options--tls))
+
+Optional:
+
+- `certificate_auth` (Block List, Max: 1) Certificate authentication for Kubernetes (see [below for nested schema](#nestedblock--kubernetes_options--certificate_auth))
+- `token_auth` (Block List, Max: 1) Token authentication for Kubernetes (see [below for nested schema](#nestedblock--kubernetes_options--token_auth))
+
+<a id="nestedblock--kubernetes_options--tls"></a>
+### Nested Schema for `kubernetes_options.tls`
+
+Required:
+
+- `mode` (String) TLS mode (Disabled, Preferred, Required)
+- `verify` (Boolean) Verify TLS certificates
+
+<a id="nestedblock--kubernetes_options--token_auth"></a>
+### Nested Schema for `kubernetes_options.token_auth`
+
+Required:
+
+- `token` (String, Sensitive) The bearer token for Kubernetes authentication
+
+<a id="nestedblock--kubernetes_options--certificate_auth"></a>
+### Nested Schema for `kubernetes_options.certificate_auth`
+
+Required:
+
+- `certificate` (String) The client certificate PEM
+- `private_key` (String, Sensitive) The client private key PEM
 
 
 <a id="nestedblock--mysql_options"></a>
