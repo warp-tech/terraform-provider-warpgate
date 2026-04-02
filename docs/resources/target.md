@@ -2,12 +2,12 @@
 page_title: "warpgate_target Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages a target in WarpGate. A target represents a destination system that users can connect to.
+  Manages a target in Warpgate. A target represents a destination system that users can connect to.
 ---
 
 # warpgate_target (Resource)
 
-Manages a target in WarpGate. A target represents a destination system that users can connect to, such as an SSH server, HTTP service, or database. Targets define the connection details and authentication methods used to access the underlying service.
+Manages a target in Warpgate. A target represents a destination system that users can connect to, such as an SSH server, HTTP service, or database. Targets define the connection details and authentication methods used to access the underlying service.
 
 ## Example Usage
 
@@ -17,17 +17,17 @@ Manages a target in WarpGate. A target represents a destination system that user
 resource "warpgate_target" "web_server" {
   name        = "web-server"
   description = "Production web server"
-  
+
   ssh_options {
     host     = "10.0.0.1"
     port     = 22
     username = "admin"
-    
+
     # You must choose either password_auth or public_key_auth
     password_auth {
       password = "supersecret"
     }
-    
+
     # OR
     # public_key_auth {}
   }
@@ -40,19 +40,19 @@ resource "warpgate_target" "web_server" {
 resource "warpgate_target" "api_server" {
   name        = "api-server"
   description = "Internal API server"
-  
+
   http_options {
     url = "https://api.internal.example.com"
     tls {
       mode   = "Required"
       verify = true
     }
-    
+
     headers = {
       "X-API-Version" = "v1"
       "X-Custom-Header" = "custom-value"
     }
-    
+
     external_host = "api.external.example.com"  # Optional
   }
 }
@@ -64,7 +64,7 @@ resource "warpgate_target" "api_server" {
 resource "warpgate_target" "mysql_db" {
   name        = "mysql-db"
   description = "Production MySQL database"
-  
+
   mysql_options {
     host     = "db.example.com"
     port     = 3306
@@ -84,7 +84,7 @@ resource "warpgate_target" "mysql_db" {
 resource "warpgate_target" "postgres_db" {
   name        = "postgres-db"
   description = "Analytics PostgreSQL database"
-  
+
   postgres_options {
     host     = "analytics-db.example.com"
     port     = 5432
@@ -104,14 +104,14 @@ resource "warpgate_target" "postgres_db" {
 resource "warpgate_target" "k8s_cluster" {
   name        = "k8s-cluster"
   description = "Production Kubernetes cluster"
-  
+
   kubernetes_options {
     cluster_url = "https://k8s.example.com:6443"
     tls {
       mode   = "Required"
       verify = true
     }
-    
+
     token_auth {
       token = "eyJhbGciOiJSUzI1NiIs..."
     }
@@ -125,14 +125,14 @@ resource "warpgate_target" "k8s_cluster" {
 resource "warpgate_target" "k8s_cluster_cert" {
   name        = "k8s-cluster-cert"
   description = "Kubernetes cluster with certificate auth"
-  
+
   kubernetes_options {
     cluster_url = "https://k8s.example.com:6443"
     tls {
       mode   = "Required"
       verify = true
     }
-    
+
     certificate_auth {
       certificate = file("client.crt")
       private_key = file("client.key")
@@ -145,7 +145,7 @@ resource "warpgate_target" "k8s_cluster_cert" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the target. Must be unique within the WarpGate instance.
+* `name` - (Required) The name of the target. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the target.
 * `group_id` - (Optional) The ID of the target group this target is assigned to.
 
@@ -185,17 +185,6 @@ One of the following option blocks must be specified:
   * `tls` - (Required) TLS configuration block.
     * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
     * `verify` - (Required) Verify TLS certificates.
-
-* `kubernetes_options` - (Optional) Kubernetes target configuration block.
-  * `cluster_url` - (Required) The Kubernetes cluster URL.
-  * `tls` - (Required) TLS configuration block.
-    * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
-    * `verify` - (Required) Verify TLS certificates.
-  * `token_auth` - (Optional) Token authentication for Kubernetes. Conflicts with `certificate_auth`.
-    * `token` - (Required) The bearer token for Kubernetes authentication.
-  * `certificate_auth` - (Optional) Certificate authentication for Kubernetes. Conflicts with `token_auth`.
-    * `certificate` - (Required) The client certificate PEM.
-    * `private_key` - (Required) The client private key PEM.
 
 ## Attribute Reference
 
@@ -278,12 +267,6 @@ Required:
 - `mode` (String) TLS mode (Disabled, Preferred, Required)
 - `verify` (Boolean) Verify TLS certificates
 
-<a id="nestedblock--kubernetes_options--token_auth"></a>
-### Nested Schema for `kubernetes_options.token_auth`
-
-Required:
-
-- `token` (String, Sensitive) The bearer token for Kubernetes authentication
 
 <a id="nestedblock--kubernetes_options--certificate_auth"></a>
 ### Nested Schema for `kubernetes_options.certificate_auth`
@@ -292,6 +275,15 @@ Required:
 
 - `certificate` (String) The client certificate PEM
 - `private_key` (String, Sensitive) The client private key PEM
+
+
+<a id="nestedblock--kubernetes_options--token_auth"></a>
+### Nested Schema for `kubernetes_options.token_auth`
+
+Required:
+
+- `token` (String, Sensitive) The bearer token for Kubernetes authentication
+
 
 
 <a id="nestedblock--mysql_options"></a>

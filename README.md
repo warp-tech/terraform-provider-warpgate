@@ -2,7 +2,7 @@
 
 # Terraform Provider for Warpgate
 
-This Terraform provider allows you to manage [WarpGate](https://github.com/warp-tech/warpgate) resources through Terraform. Warpgate is a smart SSH and HTTPS bastion that provides secure access to your infrastructure.
+This Terraform provider allows you to manage [Warpgate](https://github.com/warp-tech/warpgate) resources through Terraform. Warpgate is a smart SSH and HTTPS bastion that provides secure access to your infrastructure.
 
 ## Requirements
 
@@ -87,8 +87,8 @@ export WARPGATE_TOKEN="your-api-token"
 ```hcl
 resource "warpgate_user" "example" {
   username    = "eugene"
-  description = "Eugene - WarpGate Developer"
-  
+  description = "Eugene - Warpgate Developer"
+
   credential_policy {
     http     = ["Password", "Totp"]
     ssh      = ["PublicKey"]
@@ -139,17 +139,17 @@ resource "warpgate_user_role" "developer_role" {
 resource "warpgate_target" "app_server" {
   name        = "app-server"
   description = "Application Server"
-  
+
   ssh_options {
     host     = "10.0.0.10"
     port     = 22
     username = "admin"
-    
+
     # Use either password_auth or public_key_auth
     password_auth {
       password = var.ssh_password
     }
-    
+
     # OR
     # public_key_auth {}
   }
@@ -162,7 +162,7 @@ resource "warpgate_target" "app_server" {
 resource "warpgate_target" "web_app" {
   name        = "internal-web-app"
   description = "Internal Web Application"
-  
+
   http_options {
     url = "https://internal.example.com"
     tls {
@@ -182,7 +182,7 @@ resource "warpgate_target" "web_app" {
 resource "warpgate_target" "database" {
   name        = "mysql-db"
   description = "Production MySQL Database"
-  
+
   mysql_options {
     host     = "db.example.com"
     port     = 3306
@@ -202,7 +202,7 @@ resource "warpgate_target" "database" {
 resource "warpgate_target" "postgres_db" {
   name        = "postgres-db"
   description = "Production PostgreSQL Database"
-  
+
   postgres_options {
     host     = "postgres.example.com"
     port     = 5432

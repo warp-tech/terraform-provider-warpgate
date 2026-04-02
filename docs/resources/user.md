@@ -2,12 +2,12 @@
 page_title: "warpgate_user Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages a user in WarpGate.
+  Manages a user in Warpgate.
 ---
 
 # warpgate_user (Resource)
 
-Manages a user in WarpGate. Users represent identities that can be authenticated and authorized to access targets. Each user can have different credential policies that determine how they authenticate for different protocols.
+Manages a user in Warpgate. Users represent identities that can be authenticated and authorized to access targets. Each user can have different credential policies that determine how they authenticate for different protocols.
 
 ## Example Usage
 
@@ -64,7 +64,7 @@ resource "warpgate_user_sso_credential" "github_sso" {
 
 The following arguments are supported:
 
-* `username` - (Required) The username of the user. Must be unique within the WarpGate instance.
+* `username` - (Required) The username of the user. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the user.
 * `credential_policy` - (Optional) A block that defines the credential policies for this user. This block can be defined at most once.
 

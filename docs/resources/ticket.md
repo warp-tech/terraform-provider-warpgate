@@ -2,12 +2,12 @@
 page_title: "warpgate_ticket Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages a ticket in WarpGate. Tickets provide pre-authenticated access to a target for a specific user.
+  Manages a ticket in Warpgate. Tickets provide pre-authenticated access to a target for a specific user.
 ---
 
 # warpgate_ticket (Resource)
 
-Manages a ticket in WarpGate. Tickets provide pre-authenticated access to a target for a specific user. They can be configured with an expiry time and a limited number of uses, making them suitable for temporary access scenarios.
+Manages a ticket in Warpgate. Tickets provide pre-authenticated access to a target for a specific user. They can be configured with an expiry time and a limited number of uses, making them suitable for temporary access scenarios.
 
 ## Example Usage
 

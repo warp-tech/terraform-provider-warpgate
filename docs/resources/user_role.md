@@ -2,12 +2,12 @@
 page_title: "warpgate_user_role Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Creates an association between a user and a role in WarpGate.
+  Creates an association between a user and a role in Warpgate.
 ---
 
 # warpgate_user_role (Resource)
 
-Creates an association between a user and a role in WarpGate. This relationship grants the user the permissions associated with the role, which can include access to targets that have the same role assigned.
+Creates an association between a user and a role in Warpgate. This relationship grants the user the permissions associated with the role, which can include access to targets that have the same role assigned.
 
 ## Example Usage
 

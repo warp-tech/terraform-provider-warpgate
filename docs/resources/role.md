@@ -2,12 +2,12 @@
 page_title: "warpgate_role Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages a role in WarpGate. Roles define permissions that can be assigned to users and targets.
+  Manages a role in Warpgate. Roles define permissions that can be assigned to users and targets.
 ---
 
 # warpgate_role (Resource)
 
-Manages a role in WarpGate. Roles are the core components of WarpGate's access control system. A role can be assigned to both users and targets, establishing a many-to-many relationship that determines which users can access which targets.
+Manages a role in Warpgate. Roles are the core components of Warpgate's access control system. A role can be assigned to both users and targets, establishing a many-to-many relationship that determines which users can access which targets.
 
 ## Example Usage
 
@@ -27,7 +27,7 @@ resource "warpgate_role" "admins" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the role. Must be unique within the WarpGate instance.
+* `name` - (Required) The name of the role. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the role and its purpose.
 
 ## Attribute Reference

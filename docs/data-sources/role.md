@@ -2,12 +2,12 @@
 page_title: "warpgate_role Data Source - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Retrieves information about a specific role in WarpGate.
+  Retrieves information about a specific role in Warpgate.
 ---
 
 # warpgate_role (Data Source)
 
-Retrieves information about a specific role in WarpGate.
+Retrieves information about a specific role in Warpgate.
 
 ## Example Usage
 

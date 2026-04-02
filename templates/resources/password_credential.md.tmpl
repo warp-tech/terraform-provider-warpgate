@@ -2,12 +2,12 @@
 page_title: "warpgate_password_credential Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages a password credential for a user in WarpGate.
+  Manages a password credential for a user in Warpgate.
 ---
 
 # warpgate_password_credential (Resource)
 
-Manages a password credential for a user in WarpGate. This resource allows users to authenticate using a password for protocols that support password authentication according to the user's credential policy.
+Manages a password credential for a user in Warpgate. This resource allows users to authenticate using a password for protocols that support password authentication according to the user's credential policy.
 
 ## Example Usage
 

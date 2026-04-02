@@ -2,12 +2,12 @@
 page_title: "warpgate_user_sso_credential Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages an SSO credential for a user in WarpGate.
+  Manages an SSO credential for a user in Warpgate.
 ---
 
 # warpgate_user_sso_credential (Resource)
 
-Manages an SSO (Single Sign-On) credential for a user in WarpGate. SSO credentials allow users to authenticate using external identity providers such as Google, GitHub, Okta, Azure AD, and other SAML/OIDC providers.
+Manages an SSO (Single Sign-On) credential for a user in Warpgate. SSO credentials allow users to authenticate using external identity providers such as Google, GitHub, Okta, Azure AD, and other SAML/OIDC providers.
 
 ## Example Usage
 
@@ -82,7 +82,7 @@ resource "warpgate_user_sso_credential" "alice_google" {
 The following arguments are supported:
 
 * `user_id` - (Required, Forces new resource) The ID of the user to add the SSO credential to. Changing this forces a new resource to be created.
-* `sso_provider` - (Required) The SSO provider name. Common values include `google`, `github`, `okta`, `azure`, or any custom SAML/OIDC provider configured in WarpGate.
+* `sso_provider` - (Required) The SSO provider name. Common values include `google`, `github`, `okta`, `azure`, or any custom SAML/OIDC provider configured in Warpgate.
 * `email` - (Required) The email address associated with the SSO provider. This should match the email address in the user's SSO provider account.
 
 ## Attribute Reference
@@ -93,7 +93,7 @@ In addition to all arguments above, the following attributes are exported:
 
 ## Supported SSO Providers
 
-WarpGate supports various SSO providers. Common providers include:
+Warpgate supports various SSO providers. Common providers include:
 
 ### OAuth/OIDC Providers
 - `google` - Google Workspace / Gmail OAuth
@@ -117,7 +117,7 @@ WarpGate supports various SSO providers. Common providers include:
 
 Before creating SSO credentials, ensure that:
 
-1. The SSO provider is properly configured in your WarpGate instance
+1. The SSO provider is properly configured in your Warpgate instance
 2. The user's email address exists in the SSO provider
 3. The user has appropriate permissions in the SSO provider
 4. The user's credential policy includes `Sso` for the desired protocols

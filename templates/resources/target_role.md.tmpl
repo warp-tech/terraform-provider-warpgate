@@ -2,19 +2,19 @@
 page_title: "warpgate_target_role Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Creates an association between a target and a role in WarpGate.
+  Creates an association between a target and a role in Warpgate.
 ---
 
 # warpgate_target_role (Resource)
 
-Creates an association between a target and a role in WarpGate. This relationship makes the target accessible to users who have the same role assigned.
+Creates an association between a target and a role in Warpgate. This relationship makes the target accessible to users who have the same role assigned.
 
 ## Example Usage
 
 ```hcl
 resource "warpgate_target" "web_server" {
   name = "web-server"
-  
+
   ssh_options {
     host     = "10.0.0.1"
     port     = 22
@@ -53,7 +53,7 @@ resource "warpgate_role" "administrators" {
 resource "warpgate_user" "eugene" {
   username    = "eugene"
   description = "Developer"
-  
+
   credential_policy {
     ssh = ["Password", "PublicKey"]
   }
@@ -62,7 +62,7 @@ resource "warpgate_user" "eugene" {
 resource "warpgate_user" "jane" {
   username    = "jane.smith"
   description = "Administrator"
-  
+
   credential_policy {
     ssh = ["Password", "PublicKey"]
   }
@@ -72,7 +72,7 @@ resource "warpgate_user" "jane" {
 resource "warpgate_target" "web_server" {
   name        = "web-server"
   description = "Web server"
-  
+
   ssh_options {
     host     = "10.0.0.1"
     port     = 22
@@ -84,7 +84,7 @@ resource "warpgate_target" "web_server" {
 resource "warpgate_target" "db_server" {
   name        = "db-server"
   description = "Database server"
-  
+
   ssh_options {
     host     = "10.0.0.2"
     port     = 22

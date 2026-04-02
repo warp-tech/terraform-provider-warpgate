@@ -2,12 +2,12 @@
 page_title: "warpgate_target_group Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages a target group in WarpGate. Target groups help organize targets visually and logically.
+  Manages a target group in Warpgate. Target groups help organize targets visually and logically.
 ---
 
 # warpgate_target_group (Resource)
 
-Manages a target group in WarpGate. Target groups provide a way to organize and categorize targets for better management and visual organization. You can assign targets to groups and use color coding to make them easier to identify in the WarpGate interface.
+Manages a target group in Warpgate. Target groups provide a way to organize and categorize targets for better management and visual organization. You can assign targets to groups and use color coding to make them easier to identify in the Warpgate interface.
 
 ## Example Usage
 
@@ -35,7 +35,7 @@ resource "warpgate_target_group" "databases" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the target group. Must be unique within the WarpGate instance.
+* `name` - (Required) The name of the target group. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the target group.
 * `color` - (Optional) The color that the target group should have for visual identification. Valid values: `Primary`, `Secondary`, `Success`, `Danger`, `Warning`, `Info`, `Light`, `Dark`.
 

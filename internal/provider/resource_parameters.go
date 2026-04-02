@@ -9,6 +9,7 @@ import (
 	"github.com/warp-tech/terraform-provider-warpgate/internal/client"
 )
 
+// TEST
 func resourceParameters() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceParametersCreate,

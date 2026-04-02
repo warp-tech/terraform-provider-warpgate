@@ -2,12 +2,12 @@
 page_title: "warpgate_user Data Source - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Retrieves information about a specific user in WarpGate.
+  Retrieves information about a specific user in Warpgate.
 ---
 
 # warpgate_user (Data Source)
 
-Retrieves information about a specific user in WarpGate.
+Retrieves information about a specific user in Warpgate.
 
 ## Example Usage
 

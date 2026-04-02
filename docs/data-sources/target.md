@@ -184,6 +184,15 @@ Read-Only:
 - `tls` (List of Object) (see [below for nested schema](#nestedobjatt--kubernetes_options--tls))
 - `token_auth` (List of Object) (see [below for nested schema](#nestedobjatt--kubernetes_options--token_auth))
 
+<a id="nestedobjatt--kubernetes_options--certificate_auth"></a>
+### Nested Schema for `kubernetes_options.certificate_auth`
+
+Read-Only:
+
+- `certificate` (String)
+- `private_key` (String)
+
+
 <a id="nestedobjatt--kubernetes_options--tls"></a>
 ### Nested Schema for `kubernetes_options.tls`
 
@@ -192,6 +201,7 @@ Read-Only:
 - `mode` (String)
 - `verify` (Boolean)
 
+
 <a id="nestedobjatt--kubernetes_options--token_auth"></a>
 ### Nested Schema for `kubernetes_options.token_auth`
 
@@ -199,13 +209,6 @@ Read-Only:
 
 - `token` (String)
 
-<a id="nestedobjatt--kubernetes_options--certificate_auth"></a>
-### Nested Schema for `kubernetes_options.certificate_auth`
-
-Read-Only:
-
-- `certificate` (String)
-- `private_key` (String)
 
 
 <a id="nestedatt--mysql_options"></a>

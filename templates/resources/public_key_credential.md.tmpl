@@ -2,12 +2,12 @@
 page_title: "warpgate_public_key_credential Resource - terraform-provider-warpgate"
 subcategory: ""
 description: |-
-  Manages a public key credential for a user in WarpGate.
+  Manages a public key credential for a user in Warpgate.
 ---
 
 # warpgate_public_key_credential (Resource)
 
-Manages a public key credential for a user in WarpGate. This resource allows users to authenticate using SSH public key authentication for protocols that support it according to the user's credential policy.
+Manages a public key credential for a user in Warpgate. This resource allows users to authenticate using SSH public key authentication for protocols that support it according to the user's credential policy.
 
 ## Example Usage
 
