@@ -709,7 +709,7 @@ func buildKubernetesTargetOptions(opts map[string]any) (*client.TargetKubernetes
 			PrivateKey:  privateKey,
 		}
 	} else {
-		return nil, fmt.Errorf("Kubernetes target requires either token_auth or certificate_auth")
+		return nil, fmt.Errorf("kubernetes target requires either token_auth or certificate_auth")
 	}
 
 	return &client.TargetKubernetesOptions{

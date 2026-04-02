@@ -29,7 +29,7 @@ func (c *Client) GetTargetGroup(ctx context.Context, id string) (*TargetGroup, e
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, nil
 	}
 
