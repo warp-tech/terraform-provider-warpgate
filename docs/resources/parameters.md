@@ -19,6 +19,7 @@ resource "warpgate_parameters" "global_settings" {
   ssh_client_auth_password            = true
   ssh_client_auth_keyboard_interactive = false
   minimize_password_login             = false
+  show_session_menu                   = true
 }
 ```
 
@@ -32,6 +33,7 @@ The following arguments are supported:
 * `ssh_client_auth_password` - (Optional) Enable SSH password authentication for clients.
 * `ssh_client_auth_keyboard_interactive` - (Optional) Enable SSH keyboard interactive authentication for clients.
 * `minimize_password_login` - (Optional) Minimize the use of password-based login methods.
+* `show_session_menu` - (Optional, default: `true`) When enabled, Warpgate injects a session menu into HTTP sessions, allowing users to log out or return to the home page.
 
 ## Attribute Reference
 
@@ -58,6 +60,7 @@ $ terraform import warpgate_parameters.global_settings parameters
 
 - `minimize_password_login` (Boolean) When enabled, the username and password fields are hidden behind a link on the login page, with the focus on the SSO buttons.
 - `rate_limit_bytes_per_second` (Number) Global bandwidth limit
+- `show_session_menu` (Boolean) When enabled, Warpgate injects a session menu into HTTP sessions, allowing users to log out or return to the home page.
 - `ssh_client_auth_keyboard_interactive` (Boolean) Enable SSH keyboard interactive authentication
 - `ssh_client_auth_password` (Boolean) Enable SSH password authentication
 - `ssh_client_auth_publickey` (Boolean) Enable SSH public key authentication

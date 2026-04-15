@@ -71,6 +71,14 @@ func resourceUser() *schema.Resource {
 					},
 				},
 			},
+			"allowed_ip_ranges": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of allowed IP ranges in CIDR notation. If set, only connections from these IP ranges will be allowed for this user.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 		CustomizeDiff: validateUserConfig,
 	}
@@ -103,11 +111,23 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, meta any) d
 			Username:         username,
 			Description:      description,
 			CredentialPolicy: expandCredentialPolicy(v.([]any)),
+			AllowedIPRanges:  expandAllowedIPRanges(d),
 		}
 
 		_, err := c.UpdateUser(ctx, user.ID, updateReq)
 		if err != nil {
 			return diag.FromErr(fmt.Errorf("failed to set credential policy: %w", err))
+		}
+	} else if v, ok := d.GetOk("allowed_ip_ranges"); ok && v != nil {
+		updateReq := &client.UserUpdateRequest{
+			Username:        username,
+			Description:     description,
+			AllowedIPRanges: expandAllowedIPRanges(d),
+		}
+
+		_, err := c.UpdateUser(ctx, user.ID, updateReq)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to set allowed IP ranges: %w", err))
 		}
 	}
 
@@ -149,6 +169,12 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, meta any) dia
 		}
 	}
 
+	if user.AllowedIPRanges != nil {
+		if err := d.Set("allowed_ip_ranges", *user.AllowedIPRanges); err != nil {
+			return diag.FromErr(fmt.Errorf("failed to set allowed_ip_ranges: %w", err))
+		}
+	}
+
 	return diags
 }
 
@@ -171,6 +197,7 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, meta any) d
 		Username:         username,
 		Description:      description,
 		CredentialPolicy: credentialPolicy,
+		AllowedIPRanges:  expandAllowedIPRanges(d),
 	}
 
 	_, err := c.UpdateUser(ctx, id, req)
@@ -283,6 +310,20 @@ func flattenCredentialKindList(list []client.CredentialKind) []any {
 		result[i] = string(v)
 	}
 	return result
+}
+
+// expandAllowedIPRanges converts the allowed_ip_ranges from Terraform schema to the API format.
+func expandAllowedIPRanges(d *schema.ResourceData) *[]string {
+	v, ok := d.GetOk("allowed_ip_ranges")
+	if !ok || v == nil {
+		return nil
+	}
+	raw := v.([]any)
+	ranges := make([]string, len(raw))
+	for i, r := range raw {
+		ranges[i] = r.(string)
+	}
+	return &ranges
 }
 
 // validateUserConfig validates the user configuration in a Terraform resource diff,

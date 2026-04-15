@@ -31,6 +31,8 @@ resource "warpgate_user" "deploy_bot" {
   credential_policy {
     ssh = ["PublicKey"]
   }
+
+  allowed_ip_ranges = ["10.0.0.0/8", "192.168.1.0/24"]
 }
 
 # User with SSO authentication
@@ -67,6 +69,7 @@ The following arguments are supported:
 * `username` - (Required) The username of the user. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the user.
 * `credential_policy` - (Optional) A block that defines the credential policies for this user. This block can be defined at most once.
+* `allowed_ip_ranges` - (Optional) List of allowed IP ranges in CIDR notation (e.g. `10.0.0.0/8`, `192.168.1.0/24`, or a single IP like `1.2.3.4/32`). If set, only connections from these IP ranges will be allowed for this user. Leave empty to allow all IPs.
 
 The `credential_policy` block supports:
 
