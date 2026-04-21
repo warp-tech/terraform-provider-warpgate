@@ -40,6 +40,7 @@ type User struct {
 	Username         string                        `json:"username"`
 	Description      string                        `json:"description,omitempty"`
 	CredentialPolicy *UserRequireCredentialsPolicy `json:"credential_policy,omitempty"`
+	AllowedIPRanges  *[]string                     `json:"allowed_ip_ranges,omitempty"`
 }
 
 // UserCreateRequest is the request payload for creating a user
@@ -53,6 +54,7 @@ type UserUpdateRequest struct {
 	Username         string                        `json:"username"`
 	Description      string                        `json:"description,omitempty"`
 	CredentialPolicy *UserRequireCredentialsPolicy `json:"credential_policy,omitempty"`
+	AllowedIPRanges  *[]string                     `json:"allowed_ip_ranges,omitempty"`
 }
 
 // GetUsers retrieves all users from the Warpgate API, optionally filtered by

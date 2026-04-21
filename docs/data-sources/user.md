@@ -67,6 +67,7 @@ In addition to the arguments listed above, the following attributes are exported
   - `id` - The ID of the SSO credential.
   - `sso_provider` - The SSO provider name (e.g., 'google', 'github', 'okta').
   - `email` - The email address associated with the SSO provider.
+- `allowed_ip_ranges` - List of allowed IP ranges in CIDR notation. If set, only connections from these IP ranges are allowed for this user.
 
 ## Working with Credential Policies
 
@@ -105,6 +106,7 @@ locals {
 
 ### Read-Only
 
+- `allowed_ip_ranges` (List of String) List of allowed IP ranges in CIDR notation
 - `credential_policy` (List of Object) The credential policy for the user (see [below for nested schema](#nestedatt--credential_policy))
 - `description` (String) The description of the user
 - `sso_credentials` (List of Object) The SSO credentials associated with the user (see [below for nested schema](#nestedatt--sso_credentials))

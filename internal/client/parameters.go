@@ -15,6 +15,7 @@ type ParameterValues struct {
 	SSHClientAuthPassword           bool `json:"ssh_client_auth_password"`
 	SSHClientAuthKeyboardInteractive bool `json:"ssh_client_auth_keyboard_interactive"`
 	MinimizePasswordLogin           bool `json:"minimize_password_login"`
+	ShowSessionMenu                 bool `json:"show_session_menu"`
 }
 
 // ParametersUpdateRequest is the request payload for updating parameters
@@ -25,6 +26,7 @@ type ParametersUpdateRequest struct {
 	SSHClientAuthPassword           bool `json:"ssh_client_auth_password"`
 	SSHClientAuthKeyboardInteractive bool `json:"ssh_client_auth_keyboard_interactive"`
 	MinimizePasswordLogin           bool `json:"minimize_password_login"`
+	ShowSessionMenu                 bool `json:"show_session_menu"`
 }
 
 // GetParameters retrieves the global parameters from Warpgate

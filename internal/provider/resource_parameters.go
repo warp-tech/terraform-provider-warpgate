@@ -50,6 +50,12 @@ func resourceParameters() *schema.Resource {
 				Optional:    true,
 				Description: "When enabled, the username and password fields are hidden behind a link on the login page, with the focus on the SSO buttons.",
 			},
+			"show_session_menu": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "When enabled, Warpgate injects a session menu into HTTP sessions, allowing users to log out or return to the home page.",
+			},
 		},
 	}
 }
@@ -81,6 +87,10 @@ func resourceParametersCreate(ctx context.Context, d *schema.ResourceData, meta 
 
 	if minimizePasswordLogin, ok := d.GetOk("minimize_password_login"); ok {
 		req.MinimizePasswordLogin = minimizePasswordLogin.(bool)
+	}
+
+	if showSessionMenu, ok := d.GetOk("show_session_menu"); ok {
+		req.ShowSessionMenu = showSessionMenu.(bool)
 	}
 
 	_, err := c.UpdateParameters(ctx, req)
@@ -138,6 +148,10 @@ func resourceParametersRead(ctx context.Context, d *schema.ResourceData, meta an
 		return diag.FromErr(fmt.Errorf("failed to set minimize_password_login: %w", err))
 	}
 
+	if err := d.Set("show_session_menu", params.ShowSessionMenu); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set show_session_menu: %w", err))
+	}
+
 	return diags
 }
 
@@ -168,6 +182,10 @@ func resourceParametersUpdate(ctx context.Context, d *schema.ResourceData, meta 
 
 	if minimizePasswordLogin, ok := d.GetOk("minimize_password_login"); ok {
 		req.MinimizePasswordLogin = minimizePasswordLogin.(bool)
+	}
+
+	if showSessionMenu, ok := d.GetOk("show_session_menu"); ok {
+		req.ShowSessionMenu = showSessionMenu.(bool)
 	}
 
 	_, err := c.UpdateParameters(ctx, req)

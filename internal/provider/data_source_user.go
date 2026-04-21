@@ -96,6 +96,14 @@ func dataSourceUser() *schema.Resource {
 					},
 				},
 			},
+			"allowed_ip_ranges": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "List of allowed IP ranges in CIDR notation",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -178,6 +186,12 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, meta any) d
 	if user.CredentialPolicy != nil {
 		if err := d.Set("credential_policy", flattenCredentialPolicy(user.CredentialPolicy)); err != nil {
 			return diag.FromErr(fmt.Errorf("failed to set credential_policy: %w", err))
+		}
+	}
+
+	if user.AllowedIPRanges != nil {
+		if err := d.Set("allowed_ip_ranges", *user.AllowedIPRanges); err != nil {
+			return diag.FromErr(fmt.Errorf("failed to set allowed_ip_ranges: %w", err))
 		}
 	}
 
