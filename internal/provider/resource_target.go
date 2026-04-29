@@ -838,6 +838,12 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 
 		if password, ok := optionsMap["password"].(string); ok && password != "" {
 			mysqlOpts["password"] = password
+		} else if auth, ok := optionsMap["auth"].(map[string]any); ok {
+			if kind, _ := auth["kind"].(string); kind == "Password" {
+				if pw, ok := auth["password"].(string); ok && pw != "" {
+					mysqlOpts["password"] = pw
+				}
+			}
 		}
 
 		return d.Set("mysql_options", []any{mysqlOpts})
@@ -862,6 +868,12 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 
 		if password, ok := optionsMap["password"].(string); ok && password != "" {
 			pgOpts["password"] = password
+		} else if auth, ok := optionsMap["auth"].(map[string]any); ok {
+			if kind, _ := auth["kind"].(string); kind == "Password" {
+				if pw, ok := auth["password"].(string); ok && pw != "" {
+					pgOpts["password"] = pw
+				}
+			}
 		}
 
 		return d.Set("postgres_options", []any{pgOpts})
