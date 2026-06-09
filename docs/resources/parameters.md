@@ -19,7 +19,16 @@ resource "warpgate_parameters" "global_settings" {
   ssh_client_auth_password            = true
   ssh_client_auth_keyboard_interactive = false
   minimize_password_login             = false
+  ticket_self_service_enabled         = true
+  ticket_auto_approve_existing_access = true
+  ticket_max_duration_seconds         = 86400
+  ticket_max_uses                     = 5
+  ticket_require_description          = true
+  ticket_request_show_all_targets     = false
+  target_click_action                 = "Connect"
   show_session_menu                   = true
+  max_api_token_duration_seconds      = 2592000
+  record_scp                          = true
 }
 ```
 
@@ -33,7 +42,16 @@ The following arguments are supported:
 * `ssh_client_auth_password` - (Optional) Enable SSH password authentication for clients.
 * `ssh_client_auth_keyboard_interactive` - (Optional) Enable SSH keyboard interactive authentication for clients.
 * `minimize_password_login` - (Optional) Minimize the use of password-based login methods.
+* `ticket_self_service_enabled` - (Optional) Enable ticket self-service.
+* `ticket_auto_approve_existing_access` - (Optional) Automatically approve ticket requests when the requester already has access.
+* `ticket_max_duration_seconds` - (Optional) Maximum ticket duration in seconds.
+* `ticket_max_uses` - (Optional) Maximum number of uses for tickets.
+* `ticket_require_description` - (Optional) Require a description for ticket requests.
+* `ticket_request_show_all_targets` - (Optional) Show all targets when requesting tickets.
+* `target_click_action` - (Optional) Action to take when clicking a target. Allowed values: `Connect`, `ShowInstructions`.
 * `show_session_menu` - (Optional, default: `true`) When enabled, Warpgate injects a session menu into HTTP sessions, allowing users to log out or return to the home page.
+* `max_api_token_duration_seconds` - (Optional) Maximum API token duration in seconds.
+* `record_scp` - (Optional) Record SCP sessions.
 
 ## Attribute Reference
 
@@ -58,12 +76,21 @@ $ terraform import warpgate_parameters.global_settings parameters
 
 ### Optional
 
+- `max_api_token_duration_seconds` (Number) Maximum API token duration in seconds.
 - `minimize_password_login` (Boolean) When enabled, the username and password fields are hidden behind a link on the login page, with the focus on the SSO buttons.
 - `rate_limit_bytes_per_second` (Number) Global bandwidth limit
+- `record_scp` (Boolean) Record SCP sessions.
 - `show_session_menu` (Boolean) When enabled, Warpgate injects a session menu into HTTP sessions, allowing users to log out or return to the home page.
 - `ssh_client_auth_keyboard_interactive` (Boolean) Enable SSH keyboard interactive authentication
 - `ssh_client_auth_password` (Boolean) Enable SSH password authentication
 - `ssh_client_auth_publickey` (Boolean) Enable SSH public key authentication
+- `target_click_action` (String) Action to take when clicking a target.
+- `ticket_auto_approve_existing_access` (Boolean) Automatically approve ticket requests when the requester already has access.
+- `ticket_max_duration_seconds` (Number) Maximum ticket duration in seconds.
+- `ticket_max_uses` (Number) Maximum number of uses for tickets.
+- `ticket_request_show_all_targets` (Boolean) Show all targets when requesting tickets.
+- `ticket_require_description` (Boolean) Require a description for ticket requests.
+- `ticket_self_service_enabled` (Boolean) Enable ticket self-service.
 
 ### Read-Only
 

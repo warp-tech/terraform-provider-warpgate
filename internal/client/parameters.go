@@ -9,24 +9,42 @@ import (
 
 // ParameterValues represents the global parameters retrieved from Warpgate
 type ParameterValues struct {
-	AllowOwnCredentialManagement    bool `json:"allow_own_credential_management"`
-	RateLimitBytesPerSecond         int  `json:"rate_limit_bytes_per_second,omitempty"`
-	SSHClientAuthPublickey          bool `json:"ssh_client_auth_publickey"`
-	SSHClientAuthPassword           bool `json:"ssh_client_auth_password"`
-	SSHClientAuthKeyboardInteractive bool `json:"ssh_client_auth_keyboard_interactive"`
-	MinimizePasswordLogin           bool `json:"minimize_password_login"`
-	ShowSessionMenu                 bool `json:"show_session_menu"`
+	AllowOwnCredentialManagement     bool   `json:"allow_own_credential_management"`
+	RateLimitBytesPerSecond          int    `json:"rate_limit_bytes_per_second,omitempty"`
+	SSHClientAuthPublickey           bool   `json:"ssh_client_auth_publickey"`
+	SSHClientAuthPassword            bool   `json:"ssh_client_auth_password"`
+	SSHClientAuthKeyboardInteractive bool   `json:"ssh_client_auth_keyboard_interactive"`
+	MinimizePasswordLogin            bool   `json:"minimize_password_login"`
+	TicketSelfServiceEnabled         bool   `json:"ticket_self_service_enabled"`
+	TicketAutoApproveExistingAccess  bool   `json:"ticket_auto_approve_existing_access"`
+	TicketMaxDurationSeconds         int64  `json:"ticket_max_duration_seconds,omitempty"`
+	TicketMaxUses                    int    `json:"ticket_max_uses,omitempty"`
+	TicketRequireDescription         bool   `json:"ticket_require_description"`
+	TicketRequestShowAllTargets      bool   `json:"ticket_request_show_all_targets"`
+	TargetClickAction                string `json:"target_click_action,omitempty"`
+	ShowSessionMenu                  bool   `json:"show_session_menu"`
+	MaxAPITokenDurationSeconds       int64  `json:"max_api_token_duration_seconds,omitempty"`
+	RecordSCP                        bool   `json:"record_scp"`
 }
 
 // ParametersUpdateRequest is the request payload for updating parameters
 type ParametersUpdateRequest struct {
-	AllowOwnCredentialManagement    bool `json:"allow_own_credential_management"`
-	RateLimitBytesPerSecond         int  `json:"rate_limit_bytes_per_second,omitempty"`
-	SSHClientAuthPublickey          bool `json:"ssh_client_auth_publickey"`
-	SSHClientAuthPassword           bool `json:"ssh_client_auth_password"`
-	SSHClientAuthKeyboardInteractive bool `json:"ssh_client_auth_keyboard_interactive"`
-	MinimizePasswordLogin           bool `json:"minimize_password_login"`
-	ShowSessionMenu                 bool `json:"show_session_menu"`
+	AllowOwnCredentialManagement     bool   `json:"allow_own_credential_management"`
+	RateLimitBytesPerSecond          int    `json:"rate_limit_bytes_per_second,omitempty"`
+	SSHClientAuthPublickey           bool   `json:"ssh_client_auth_publickey"`
+	SSHClientAuthPassword            bool   `json:"ssh_client_auth_password"`
+	SSHClientAuthKeyboardInteractive bool   `json:"ssh_client_auth_keyboard_interactive"`
+	MinimizePasswordLogin            bool   `json:"minimize_password_login"`
+	TicketSelfServiceEnabled         bool   `json:"ticket_self_service_enabled"`
+	TicketAutoApproveExistingAccess  bool   `json:"ticket_auto_approve_existing_access"`
+	TicketMaxDurationSeconds         int64  `json:"ticket_max_duration_seconds,omitempty"`
+	TicketMaxUses                    int    `json:"ticket_max_uses,omitempty"`
+	TicketRequireDescription         bool   `json:"ticket_require_description"`
+	TicketRequestShowAllTargets      bool   `json:"ticket_request_show_all_targets"`
+	TargetClickAction                string `json:"target_click_action,omitempty"`
+	ShowSessionMenu                  bool   `json:"show_session_menu"`
+	MaxAPITokenDurationSeconds       int64  `json:"max_api_token_duration_seconds,omitempty"`
+	RecordSCP                        bool   `json:"record_scp"`
 }
 
 // GetParameters retrieves the global parameters from Warpgate
