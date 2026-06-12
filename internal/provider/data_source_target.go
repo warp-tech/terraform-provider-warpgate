@@ -220,6 +220,11 @@ func dataSourceTarget() *schema.Resource {
 							Computed:    true,
 							Description: "The PostgreSQL username",
 						},
+						"protocol_version": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The PostgreSQL protocol version requested by the target",
+						},
 						"password": {
 							Type:        schema.TypeString,
 							Computed:    true,
