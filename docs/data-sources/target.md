@@ -119,6 +119,7 @@ Based on the target type, one of the following option blocks will be populated:
   - `host` - The PostgreSQL server hostname or IP address.
   - `port` - The PostgreSQL server port.
   - `username` - The PostgreSQL username.
+  - `protocol_version` - The PostgreSQL protocol version requested by the target.
   - `password` - The PostgreSQL password.
   - `tls` - TLS configuration.
     - `mode` - TLS mode (Disabled, Preferred, Required).
@@ -240,6 +241,7 @@ Read-Only:
 - `host` (String)
 - `password` (String)
 - `port` (Number)
+- `protocol_version` (String)
 - `tls` (List of Object) (see [below for nested schema](#nestedobjatt--postgres_options--tls))
 - `username` (String)
 

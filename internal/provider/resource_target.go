@@ -238,6 +238,12 @@ func resourceTarget() *schema.Resource {
 							Required:    true,
 							Description: "The PostgreSQL username",
 						},
+						"protocol_version": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"3.0", "3.2"}, false),
+							Description:  "The PostgreSQL protocol version to request. Valid values: 3.0, 3.2",
+						},
 						"password": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -650,6 +656,11 @@ func buildPostgresTargetOptions(opts map[string]any) (*client.TargetPostgresOpti
 	port := opts["port"].(int)
 	username := opts["username"].(string)
 
+	var protocolVersion string
+	if v, ok := opts["protocol_version"]; ok {
+		protocolVersion = v.(string)
+	}
+
 	var password string
 	if v, ok := opts["password"]; ok {
 		password = v.(string)
@@ -666,12 +677,13 @@ func buildPostgresTargetOptions(opts map[string]any) (*client.TargetPostgresOpti
 	}
 
 	return &client.TargetPostgresOptions{
-		Kind:     "Postgres",
-		Host:     host,
-		Port:     port,
-		Username: username,
-		Password: password,
-		TLS:      tls,
+		Kind:            "Postgres",
+		Host:            host,
+		Port:            port,
+		Username:        username,
+		ProtocolVersion: protocolVersion,
+		Password:        password,
+		TLS:             tls,
 	}, nil
 }
 
@@ -864,6 +876,10 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 			"port":     optionsMap["port"],
 			"username": optionsMap["username"],
 			"tls":      []any{tlsOpts},
+		}
+
+		if protocolVersion, ok := optionsMap["protocol_version"].(string); ok && protocolVersion != "" {
+			pgOpts["protocol_version"] = protocolVersion
 		}
 
 		if password, ok := optionsMap["password"].(string); ok && password != "" {

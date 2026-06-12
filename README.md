@@ -204,10 +204,11 @@ resource "warpgate_target" "postgres_db" {
   description = "Production PostgreSQL Database"
 
   postgres_options {
-    host     = "postgres.example.com"
-    port     = 5432
-    username = "admin"
-    password = var.postgres_password
+    host             = "postgres.example.com"
+    port             = 5432
+    username         = "admin"
+    protocol_version = "3.0"
+    password         = var.postgres_password
     tls {
       mode   = "Required"
       verify = true

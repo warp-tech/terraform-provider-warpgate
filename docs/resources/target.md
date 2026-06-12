@@ -86,10 +86,11 @@ resource "warpgate_target" "postgres_db" {
   description = "Analytics PostgreSQL database"
 
   postgres_options {
-    host     = "analytics-db.example.com"
-    port     = 5432
-    username = "analyst"
-    password = "dbpassword"
+    host             = "analytics-db.example.com"
+    port             = 5432
+    username         = "analyst"
+    protocol_version = "3.0"
+    password         = "dbpassword"
     tls {
       mode   = "Required"
       verify = true
@@ -181,6 +182,7 @@ One of the following option blocks must be specified:
   * `host` - (Required) The PostgreSQL server hostname or IP address.
   * `port` - (Required) The PostgreSQL server port.
   * `username` - (Required) The PostgreSQL username.
+  * `protocol_version` - (Optional) The PostgreSQL protocol version to request. Valid values: `3.0`, `3.2`.
   * `password` - (Optional) The PostgreSQL password.
   * `tls` - (Required) TLS configuration block.
     * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
@@ -323,6 +325,7 @@ Required:
 Optional:
 
 - `password` (String, Sensitive) The PostgreSQL password
+- `protocol_version` (String) The PostgreSQL protocol version to request. Valid values: 3.0, 3.2
 
 <a id="nestedblock--postgres_options--tls"></a>
 ### Nested Schema for `postgres_options.tls`
