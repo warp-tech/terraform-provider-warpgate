@@ -13,8 +13,9 @@ Manages a user in Warpgate. Users represent identities that can be authenticated
 
 ```hcl
 resource "warpgate_user" "eugene" {
-  username    = "eugene"
-  description = "Eugene - Development Lead"
+  username                    = "eugene"
+  description                 = "Eugene - Development Lead"
+  rate_limit_bytes_per_second = 1048576
 
   credential_policy {
     ssh      = ["Password", "PublicKey"]
@@ -68,6 +69,7 @@ The following arguments are supported:
 
 * `username` - (Required) The username of the user. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the user.
+* `rate_limit_bytes_per_second` - (Optional) Bandwidth limit in bytes per second.
 * `credential_policy` - (Optional) A block that defines the credential policies for this user. This block can be defined at most once.
 * `allowed_ip_ranges` - (Optional) List of allowed IP ranges in CIDR notation (e.g. `10.0.0.0/8`, `192.168.1.0/24`, or a single IP like `1.2.3.4/32`). If set, only connections from these IP ranges will be allowed for this user. Leave empty to allow all IPs.
 
@@ -137,6 +139,7 @@ $ terraform import warpgate_user.eugene 12345678-1234-1234-1234-123456789012
 - `allowed_ip_ranges` (List of String) List of allowed IP ranges in CIDR notation. If set, only connections from these IP ranges will be allowed for this user.
 - `credential_policy` (Block List, Max: 1) The credential policy for the user (see [below for nested schema](#nestedblock--credential_policy))
 - `description` (String) The description of the user
+- `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
 
 ### Read-Only
 
