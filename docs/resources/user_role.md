@@ -9,7 +9,11 @@ description: |-
 
 Creates an association between a user and a role in Warpgate. This relationship grants the user the permissions associated with the role, which can include access to targets that have the same role assigned.
 
+Role assignments can optionally have an expiry timestamp for time-limited access grants. Expired assignments are automatically denied during authorization.
+
 ## Example Usage
+
+### Permanent role assignment
 
 ```hcl
 resource "warpgate_user" "eugene" {
@@ -26,12 +30,27 @@ resource "warpgate_user_role" "eugene_developer" {
 }
 ```
 
+### Time-limited role assignment
+
+```hcl
+resource "warpgate_user_role" "contractor_access" {
+  user_id = warpgate_user.contractor.id
+  role_id = warpgate_role.deploy.id
+
+  expiry {
+    expires_at = "2026-12-31T23:59:59Z"
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `user_id` - (Required) The ID of the user to assign the role to.
 * `role_id` - (Required) The ID of the role to assign.
+* `expiry` - (Optional) Expiry configuration block. When omitted, the assignment is permanent.
+  * `expires_at` - (Optional) When the role assignment expires, as an RFC3339 timestamp (e.g. `2026-12-31T23:59:59Z`).
 
 ## Attribute Reference
 
@@ -54,6 +73,11 @@ $ terraform import warpgate_user_role.eugene_developer 12345678-1234-1234-1234-1
 
 - `role_id` (String) The ID of the role to assign
 - `user_id` (String) The ID of the user to assign the role to
+
+### Optional
+
+- `expiry` (Block List, Max: 1) Expiry configuration for the role assignment
+  - `expires_at` (String) When the role assignment expires (RFC3339 timestamp)
 
 ### Read-Only
 
