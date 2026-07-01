@@ -85,6 +85,7 @@ In addition to the arguments listed above, the following attributes are exported
 - `name` - The name of the target.
 - `description` - The description of the target.
 - `group_id` - The ID of the target group this target is assigned to.
+- `rate_limit_bytes_per_second` - Bandwidth limit in bytes per second.
 - `allow_roles` - The list of roles allowed to access this target.
 
 Based on the target type, one of the following option blocks will be populated:
@@ -153,6 +154,7 @@ Based on the target type, one of the following option blocks will be populated:
 - `kubernetes_options` (List of Object) Kubernetes target options (see [below for nested schema](#nestedatt--kubernetes_options))
 - `mysql_options` (List of Object) MySQL target options (see [below for nested schema](#nestedatt--mysql_options))
 - `postgres_options` (List of Object) PostgreSQL target options (see [below for nested schema](#nestedatt--postgres_options))
+- `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
 - `ssh_options` (List of Object) SSH target options (see [below for nested schema](#nestedatt--ssh_options))
 
 <a id="nestedatt--http_options"></a>

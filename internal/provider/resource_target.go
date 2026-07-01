@@ -47,6 +47,13 @@ func resourceTarget() *schema.Resource {
 				Optional:    true,
 				Description: "Which target group this target is assigned to",
 			},
+			rateLimitBytesPerSecondKey: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Bandwidth limit in bytes per second",
+				ValidateFunc: validation.IntAtLeast(0),
+			},
 			// SSH Target Configuration
 			"ssh_options": {
 				Type:          schema.TypeList,
@@ -386,21 +393,9 @@ func resourceTargetCreate(ctx context.Context, d *schema.ResourceData, meta any)
 	providerMeta := meta.(*providerMeta)
 	c := providerMeta.client
 
-	name := d.Get("name").(string)
-	description := d.Get("description").(string)
-	groupId := d.Get("group_id").(string)
-
-	// Determine which type of target options is being used and build the appropriate request
-	targetOptions, err := buildTargetOptions(d)
+	req, err := buildTargetDataRequest(d)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("failed to build target options: %w", err))
-	}
-
-	req := &client.TargetDataRequest{
-		Name:        name,
-		Description: description,
-		Options:     targetOptions,
-		GroupId:     groupId,
+		return diag.FromErr(fmt.Errorf("failed to build target request: %w", err))
 	}
 
 	target, err := c.CreateTarget(ctx, req)
@@ -446,6 +441,10 @@ func resourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any) d
 		return diag.FromErr(fmt.Errorf("failed to set group_id: %w", err))
 	}
 
+	if err := setOptionalInt(d, rateLimitBytesPerSecondKey, target.RateLimitBytesPerSecond); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set rate_limit_bytes_per_second: %w", err))
+	}
+
 	if err := d.Set("allow_roles", target.AllowRoles); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set allow_roles: %w", err))
 	}
@@ -465,21 +464,10 @@ func resourceTargetUpdate(ctx context.Context, d *schema.ResourceData, meta any)
 	c := providerMeta.client
 
 	id := d.Id()
-	name := d.Get("name").(string)
-	description := d.Get("description").(string)
-	groupId := d.Get("group_id").(string)
 
-	// Determine which type of target options is being used and build the appropriate request
-	targetOptions, err := buildTargetOptions(d)
+	req, err := buildTargetDataRequest(d)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("failed to build target options: %w", err))
-	}
-
-	req := &client.TargetDataRequest{
-		Name:        name,
-		Description: description,
-		Options:     targetOptions,
-		GroupId:     groupId,
+		return diag.FromErr(fmt.Errorf("failed to build target request: %w", err))
 	}
 
 	_, err = c.UpdateTarget(ctx, id, req)
@@ -507,6 +495,21 @@ func resourceTargetDelete(ctx context.Context, d *schema.ResourceData, meta any)
 	d.SetId("")
 
 	return diags
+}
+
+func buildTargetDataRequest(d *schema.ResourceData) (*client.TargetDataRequest, error) {
+	targetOptions, err := buildTargetOptions(d)
+	if err != nil {
+		return nil, err
+	}
+
+	return &client.TargetDataRequest{
+		Name:                    d.Get("name").(string),
+		Description:             d.Get("description").(string),
+		GroupId:                 d.Get("group_id").(string),
+		RateLimitBytesPerSecond: optionalIntPointer(d, rateLimitBytesPerSecondKey),
+		Options:                 targetOptions,
+	}, nil
 }
 
 // buildTargetOptions constructs the appropriate target options based on which configuration

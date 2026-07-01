@@ -35,6 +35,11 @@ func dataSourceUser() *schema.Resource {
 				Computed:    true,
 				Description: "The description of the user",
 			},
+			rateLimitBytesPerSecondKey: {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "Bandwidth limit in bytes per second",
+			},
 			"credential_policy": {
 				Type:        schema.TypeList,
 				Computed:    true,
@@ -181,6 +186,10 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, meta any) d
 
 	if err := d.Set("description", user.Description); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set description: %w", err))
+	}
+
+	if err := setOptionalInt(d, rateLimitBytesPerSecondKey, user.RateLimitBytesPerSecond); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set rate_limit_bytes_per_second: %w", err))
 	}
 
 	if user.CredentialPolicy != nil {

@@ -15,9 +15,10 @@ Manages a target in Warpgate. A target represents a destination system that user
 
 ```hcl
 resource "warpgate_target" "web_server" {
-  name        = "web-server"
-  description = "Production web server"
-
+  name                        = "web-server"
+  description                 = "Production web server"
+  rate_limit_bytes_per_second = 1048576
+  
   ssh_options {
     host     = "10.0.0.1"
     port     = 22
@@ -149,6 +150,7 @@ The following arguments are supported:
 * `name` - (Required) The name of the target. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the target.
 * `group_id` - (Optional) The ID of the target group this target is assigned to.
+* `rate_limit_bytes_per_second` - (Optional) Bandwidth limit in bytes per second.
 
 One of the following option blocks must be specified:
 
@@ -218,6 +220,7 @@ $ terraform import warpgate_target.web_server 12345678-1234-1234-1234-1234567890
 - `kubernetes_options` (Block List, Max: 1) Kubernetes target options (see [below for nested schema](#nestedblock--kubernetes_options))
 - `mysql_options` (Block List, Max: 1) MySQL target options (see [below for nested schema](#nestedblock--mysql_options))
 - `postgres_options` (Block List, Max: 1) PostgreSQL target options (see [below for nested schema](#nestedblock--postgres_options))
+- `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
 - `ssh_options` (Block List, Max: 1) SSH target options (see [below for nested schema](#nestedblock--ssh_options))
 
 ### Read-Only

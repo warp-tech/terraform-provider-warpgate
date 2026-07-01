@@ -36,11 +36,12 @@ type UserRequireCredentialsPolicy struct {
 
 // User represents a Warpgate user
 type User struct {
-	ID               string                        `json:"id"`
-	Username         string                        `json:"username"`
-	Description      string                        `json:"description,omitempty"`
-	CredentialPolicy *UserRequireCredentialsPolicy `json:"credential_policy,omitempty"`
-	AllowedIPRanges  *[]string                     `json:"allowed_ip_ranges,omitempty"`
+	ID                      string                        `json:"id"`
+	Username                string                        `json:"username"`
+	Description             string                        `json:"description,omitempty"`
+	CredentialPolicy        *UserRequireCredentialsPolicy `json:"credential_policy,omitempty"`
+	RateLimitBytesPerSecond *int                          `json:"rate_limit_bytes_per_second,omitempty"`
+	AllowedIPRanges         *[]string                     `json:"allowed_ip_ranges,omitempty"`
 }
 
 // UserCreateRequest is the request payload for creating a user
@@ -51,10 +52,11 @@ type UserCreateRequest struct {
 
 // UserUpdateRequest is the request payload for updating a user
 type UserUpdateRequest struct {
-	Username         string                        `json:"username"`
-	Description      string                        `json:"description,omitempty"`
-	CredentialPolicy *UserRequireCredentialsPolicy `json:"credential_policy,omitempty"`
-	AllowedIPRanges  *[]string                     `json:"allowed_ip_ranges,omitempty"`
+	Username                string                        `json:"username"`
+	Description             string                        `json:"description,omitempty"`
+	CredentialPolicy        *UserRequireCredentialsPolicy `json:"credential_policy,omitempty"`
+	RateLimitBytesPerSecond *int                          `json:"rate_limit_bytes_per_second,omitempty"`
+	AllowedIPRanges         *[]string                     `json:"allowed_ip_ranges,omitempty"`
 }
 
 // GetUsers retrieves all users from the Warpgate API, optionally filtered by

@@ -33,6 +33,13 @@ func resourceUser() *schema.Resource {
 				Optional:    true,
 				Description: "The description of the user",
 			},
+			rateLimitBytesPerSecondKey: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Bandwidth limit in bytes per second",
+				ValidateFunc: validation.IntAtLeast(0),
+			},
 			"credential_policy": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -105,29 +112,11 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, meta any) d
 
 	d.SetId(user.ID)
 
-	// Handle credential policy if it's set
-	if v, ok := d.GetOk("credential_policy"); ok {
-		updateReq := &client.UserUpdateRequest{
-			Username:         username,
-			Description:      description,
-			CredentialPolicy: expandCredentialPolicy(v.([]any)),
-			AllowedIPRanges:  expandAllowedIPRanges(d),
-		}
-
+	if needsUserPostCreateUpdate(d) {
+		updateReq := buildUserUpdateRequest(d)
 		_, err := c.UpdateUser(ctx, user.ID, updateReq)
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("failed to set credential policy: %w", err))
-		}
-	} else if v, ok := d.GetOk("allowed_ip_ranges"); ok && v != nil {
-		updateReq := &client.UserUpdateRequest{
-			Username:        username,
-			Description:     description,
-			AllowedIPRanges: expandAllowedIPRanges(d),
-		}
-
-		_, err := c.UpdateUser(ctx, user.ID, updateReq)
-		if err != nil {
-			return diag.FromErr(fmt.Errorf("failed to set allowed IP ranges: %w", err))
+			return diag.FromErr(fmt.Errorf("failed to update user after creation: %w", err))
 		}
 	}
 
@@ -163,6 +152,10 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, meta any) dia
 		return diag.FromErr(fmt.Errorf("failed to set description: %w", err))
 	}
 
+	if err := setOptionalInt(d, rateLimitBytesPerSecondKey, user.RateLimitBytesPerSecond); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set rate_limit_bytes_per_second: %w", err))
+	}
+
 	if user.CredentialPolicy != nil {
 		if err := d.Set("credential_policy", flattenCredentialPolicy(user.CredentialPolicy)); err != nil {
 			return diag.FromErr(fmt.Errorf("failed to set credential_policy: %w", err))
@@ -185,20 +178,7 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, meta any) d
 	c := providerMeta.client
 
 	id := d.Id()
-	username := d.Get("username").(string)
-	description := d.Get("description").(string)
-
-	var credentialPolicy *client.UserRequireCredentialsPolicy
-	if v, ok := d.GetOk("credential_policy"); ok {
-		credentialPolicy = expandCredentialPolicy(v.([]any))
-	}
-
-	req := &client.UserUpdateRequest{
-		Username:         username,
-		Description:      description,
-		CredentialPolicy: credentialPolicy,
-		AllowedIPRanges:  expandAllowedIPRanges(d),
-	}
+	req := buildUserUpdateRequest(d)
 
 	_, err := c.UpdateUser(ctx, id, req)
 	if err != nil {
@@ -225,6 +205,34 @@ func resourceUserDelete(ctx context.Context, d *schema.ResourceData, meta any) d
 	d.SetId("")
 
 	return diags
+}
+
+func needsUserPostCreateUpdate(d *schema.ResourceData) bool {
+	if _, ok := d.GetOk("credential_policy"); ok {
+		return true
+	}
+
+	if _, ok := d.GetOkExists(rateLimitBytesPerSecondKey); ok {
+		return true
+	}
+
+	_, ok := d.GetOk("allowed_ip_ranges")
+	return ok
+}
+
+func buildUserUpdateRequest(d *schema.ResourceData) *client.UserUpdateRequest {
+	req := &client.UserUpdateRequest{
+		Username:                d.Get("username").(string),
+		Description:             d.Get("description").(string),
+		RateLimitBytesPerSecond: optionalIntPointer(d, rateLimitBytesPerSecondKey),
+		AllowedIPRanges:         expandAllowedIPRanges(d),
+	}
+
+	if v, ok := d.GetOk("credential_policy"); ok {
+		req.CredentialPolicy = expandCredentialPolicy(v.([]any))
+	}
+
+	return req
 }
 
 // expandCredentialPolicy converts a Terraform schema representation of credential policy

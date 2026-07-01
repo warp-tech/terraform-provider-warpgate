@@ -40,6 +40,11 @@ func dataSourceTarget() *schema.Resource {
 				Computed:    true,
 				Description: "Which target group this target is assigned to",
 			},
+			rateLimitBytesPerSecondKey: {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "Bandwidth limit in bytes per second",
+			},
 			"allow_roles": {
 				Type:        schema.TypeList,
 				Computed:    true,
@@ -381,6 +386,10 @@ func dataSourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any)
 
 	if err := d.Set("group_id", target.GroupId); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set group_id: %w", err))
+	}
+
+	if err := setOptionalInt(d, rateLimitBytesPerSecondKey, target.RateLimitBytesPerSecond); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set rate_limit_bytes_per_second: %w", err))
 	}
 
 	if err := d.Set("allow_roles", target.AllowRoles); err != nil {

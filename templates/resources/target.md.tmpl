@@ -15,9 +15,10 @@ Manages a target in Warpgate. A target represents a destination system that user
 
 ```hcl
 resource "warpgate_target" "web_server" {
-  name        = "web-server"
-  description = "Production web server"
-
+  name                        = "web-server"
+  description                 = "Production web server"
+  rate_limit_bytes_per_second = 1048576
+  
   ssh_options {
     host     = "10.0.0.1"
     port     = 22
@@ -149,6 +150,7 @@ The following arguments are supported:
 * `name` - (Required) The name of the target. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the target.
 * `group_id` - (Optional) The ID of the target group this target is assigned to.
+* `rate_limit_bytes_per_second` - (Optional) Bandwidth limit in bytes per second.
 
 One of the following option blocks must be specified:
 

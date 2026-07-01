@@ -28,12 +28,13 @@ type TLS struct {
 
 // Target represents a Warpgate target
 type Target struct {
-	ID          string        `json:"id"`
-	Name        string        `json:"name"`
-	Description string        `json:"description,omitempty"`
-	GroupId     string        `json:"group_id,omitempty"`
-	AllowRoles  []string      `json:"allow_roles"`
-	Options     TargetOptions `json:"options"`
+	ID                      string        `json:"id"`
+	Name                    string        `json:"name"`
+	Description             string        `json:"description,omitempty"`
+	GroupId                 string        `json:"group_id,omitempty"`
+	RateLimitBytesPerSecond *int          `json:"rate_limit_bytes_per_second,omitempty"`
+	AllowRoles              []string      `json:"allow_roles"`
+	Options                 TargetOptions `json:"options"`
 }
 
 // TargetOptions is a wrapper for the different target option types
@@ -119,10 +120,11 @@ type TargetKubernetesOptions struct {
 
 // TargetDataRequest is the request payload for creating/updating a target
 type TargetDataRequest struct {
-	Name        string        `json:"name"`
-	Description string        `json:"description,omitempty"`
-	GroupId     string        `json:"group_id,omitempty"`
-	Options     TargetOptions `json:"options"`
+	Name                    string        `json:"name"`
+	Description             string        `json:"description,omitempty"`
+	GroupId                 string        `json:"group_id,omitempty"`
+	RateLimitBytesPerSecond *int          `json:"rate_limit_bytes_per_second,omitempty"`
+	Options                 TargetOptions `json:"options"`
 }
 
 // GetTargets retrieves all targets from the Warpgate API, optionally filtered by

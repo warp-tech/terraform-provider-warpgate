@@ -58,6 +58,7 @@ In addition to the arguments listed above, the following attributes are exported
 
 - `username` - The username of the user.
 - `description` - The description of the user.
+- `rate_limit_bytes_per_second` - Bandwidth limit in bytes per second.
 - `credential_policy` - The credential policy for the user. This is a list with a single element.
   - `http` - List of credential types required for HTTP access.
   - `ssh` - List of credential types required for SSH access.
@@ -109,6 +110,7 @@ locals {
 - `allowed_ip_ranges` (List of String) List of allowed IP ranges in CIDR notation
 - `credential_policy` (List of Object) The credential policy for the user (see [below for nested schema](#nestedatt--credential_policy))
 - `description` (String) The description of the user
+- `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
 - `sso_credentials` (List of Object) The SSO credentials associated with the user (see [below for nested schema](#nestedatt--sso_credentials))
 
 <a id="nestedatt--credential_policy"></a>
