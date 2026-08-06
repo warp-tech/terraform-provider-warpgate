@@ -52,10 +52,48 @@ resource "warpgate_parameters" "global_settings" {
   lp_user_auto_unlock                      = true
   lp_user_lockout_duration_seconds         = 900
   lp_user_exempt_admins                    = true
-  ssh_banner                               = "Authorized access only"
-  web_ssh_enabled                          = true
+  banner                                   = "Authorized access only"
+  web_clients_enabled                      = true
   analytics_consent                        = "Off"
   analytics_normal                         = false
+
+  ssh_host_key_verification                = "AutoAccept"
+  web_auth_max_age_seconds                 = 28800
+  web_approval_grace_period_seconds        = 3600
+
+  recordings_enable                        = true
+  recordings_storage {
+    disk {
+      path = "/var/lib/warpgate/recordings"
+    }
+  }
+}
+```
+
+Recordings on S3-compatible object storage instead of a local disk:
+
+```hcl
+resource "warpgate_parameters" "main" {
+  allow_own_credential_management = true
+
+  recordings_enable = true
+  recordings_storage {
+    s3 {
+      bucket     = "warpgate-recordings"
+      region     = "us-east-1"
+      endpoint   = "https://minio.example.com"
+      path_style = true
+      prefix     = "sessions/"
+
+      static_credentials {
+        access_key_id     = var.s3_access_key_id
+        secret_access_key = var.s3_secret_access_key
+      }
+
+      # Or, to use the ambient AWS credential chain:
+      # auto_credentials {}
+    }
+  }
 }
 ```
 
@@ -93,10 +131,29 @@ The following arguments are supported:
 * `lp_user_auto_unlock` - (Optional) Automatically unlock users after the lockout duration.
 * `lp_user_lockout_duration_seconds` - (Optional) User lockout duration in seconds.
 * `lp_user_exempt_admins` - (Optional) Exempt administrators from user login protection lockouts.
-* `ssh_banner` - (Optional) Banner shown to SSH clients before authentication.
-* `web_ssh_enabled` - (Optional) Enable web-based SSH sessions.
+* `banner` - (Optional) Banner shown to clients before authentication.
+* `web_clients_enabled` - (Optional) Enable the web-based session clients.
 * `analytics_consent` - (Optional) Whether the instance reports anonymous usage analytics. Allowed values: `Undecided`, `Off`, `On`.
 * `analytics_normal` - (Optional) Enable the normal analytics payload level.
+* `ssh_host_key_verification` - (Optional) What to do when a target's SSH host key isn't in the known hosts list. Allowed values: `Prompt`, `AutoAccept`, `AutoReject`, `Ignore`.
+* `web_auth_max_age_seconds` - (Optional) How long a web login stays valid before reauthentication is required, in seconds.
+* `web_approval_grace_period_seconds` - (Optional) How long a remembered web approval stays valid, in seconds.
+* `recordings_enable` - (Optional) Record sessions.
+* `recordings_storage` - (Optional) Where session recordings are stored. Exactly one of the `disk` or `s3` blocks.
+  * `disk` - Local filesystem storage.
+    * `path` - (Required) Directory recordings are written to.
+  * `s3` - S3 or S3-compatible object storage.
+    * `bucket` - (Required) Bucket name.
+    * `region` - (Required) Bucket region.
+    * `endpoint` - (Optional) Custom endpoint for S3-compatible services. Empty means AWS.
+    * `path_style` - (Optional) Path-style addressing, required by most S3-compatible services.
+    * `prefix` - (Optional) Key prefix prepended to every object path.
+    * `auto_credentials` - (Optional) Authenticate with the ambient AWS credential chain. Conflicts with `static_credentials`.
+    * `static_credentials` - (Optional) Authenticate with an explicit key pair. Conflicts with `auto_credentials`.
+      * `access_key_id` - (Required) Access key ID.
+      * `secret_access_key` - (Optional) Secret access key. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.
+
+~> **Note** `recordings_enable` and `recordings_storage` require Warpgate 0.27 or newer, where recording storage moved out of `warpgate.yaml` into the database.
 
 ## Attribute Reference
 
@@ -123,6 +180,7 @@ $ terraform import warpgate_parameters.global_settings parameters
 
 - `analytics_consent` (String) Whether the instance reports anonymous usage analytics.
 - `analytics_normal` (Boolean) Enable the normal analytics payload level.
+- `banner` (String) Banner shown to clients before authentication.
 - `login_protection_enabled` (Boolean) Enable login protection.
 - `login_protection_retention_seconds` (Number) How long login protection records are retained, in seconds.
 - `lp_ip_base_block_duration_seconds` (Number) Base IP block duration in seconds.
@@ -141,11 +199,13 @@ $ terraform import warpgate_parameters.global_settings parameters
 - `password_policy` (Block List, Max: 1) Password policy rules. (see [below for nested schema](#nestedblock--password_policy))
 - `rate_limit_bytes_per_second` (Number) Global bandwidth limit
 - `record_scp` (Boolean) Record SCP sessions.
+- `recordings_enable` (Boolean) Record sessions.
+- `recordings_storage` (Block List, Max: 1) Where session recordings are stored. (see [below for nested schema](#nestedblock--recordings_storage))
 - `show_session_menu` (Boolean) When enabled, Warpgate injects a session menu into HTTP sessions, allowing users to log out or return to the home page.
-- `ssh_banner` (String) Banner shown to SSH clients before authentication.
 - `ssh_client_auth_keyboard_interactive` (Boolean) Enable SSH keyboard interactive authentication
 - `ssh_client_auth_password` (Boolean) Enable SSH password authentication
 - `ssh_client_auth_publickey` (Boolean) Enable SSH public key authentication
+- `ssh_host_key_verification` (String) What to do when a target's SSH host key isn't in the known hosts list.
 - `target_click_action` (String) Action to take when clicking a target.
 - `ticket_auto_approve_existing_access` (Boolean) Automatically approve ticket requests when the requester already has access.
 - `ticket_max_duration_seconds` (Number) Maximum ticket duration in seconds.
@@ -153,7 +213,9 @@ $ terraform import warpgate_parameters.global_settings parameters
 - `ticket_request_show_all_targets` (Boolean) Show all targets when requesting tickets.
 - `ticket_require_description` (Boolean) Require a description for ticket requests.
 - `ticket_self_service_enabled` (Boolean) Enable ticket self-service.
-- `web_ssh_enabled` (Boolean) Enable web-based SSH sessions.
+- `web_approval_grace_period_seconds` (Number) How long a remembered web approval stays valid, in seconds.
+- `web_auth_max_age_seconds` (Number) How long a web login stays valid before reauthentication is required, in seconds.
+- `web_clients_enabled` (Boolean) Enable the web-based session clients.
 
 ### Read-Only
 
@@ -169,3 +231,51 @@ Optional:
 - `require_lowercase` (Boolean) Require at least one lowercase character.
 - `require_special` (Boolean) Require at least one special character.
 - `require_uppercase` (Boolean) Require at least one uppercase character.
+
+
+<a id="nestedblock--recordings_storage"></a>
+### Nested Schema for `recordings_storage`
+
+Optional:
+
+- `disk` (Block List, Max: 1) Local filesystem storage (see [below for nested schema](#nestedblock--recordings_storage--disk))
+- `s3` (Block List, Max: 1) S3 or S3-compatible object storage (see [below for nested schema](#nestedblock--recordings_storage--s3))
+
+<a id="nestedblock--recordings_storage--disk"></a>
+### Nested Schema for `recordings_storage.disk`
+
+Required:
+
+- `path` (String) Directory recordings are written to
+
+
+<a id="nestedblock--recordings_storage--s3"></a>
+### Nested Schema for `recordings_storage.s3`
+
+Required:
+
+- `bucket` (String) Bucket name
+- `region` (String) Bucket region
+
+Optional:
+
+- `auto_credentials` (Block List, Max: 1) Authenticate with the ambient AWS credential chain (see [below for nested schema](#nestedblock--recordings_storage--s3--auto_credentials))
+- `endpoint` (String) Custom endpoint for S3-compatible services. Empty means AWS.
+- `path_style` (Boolean) Path-style addressing, required by most S3-compatible services
+- `prefix` (String) Key prefix prepended to every object path
+- `static_credentials` (Block List, Max: 1) Authenticate with an explicit key pair (see [below for nested schema](#nestedblock--recordings_storage--s3--static_credentials))
+
+<a id="nestedblock--recordings_storage--s3--auto_credentials"></a>
+### Nested Schema for `recordings_storage.s3.auto_credentials`
+
+
+<a id="nestedblock--recordings_storage--s3--static_credentials"></a>
+### Nested Schema for `recordings_storage.s3.static_credentials`
+
+Required:
+
+- `access_key_id` (String) Access key ID
+
+Optional:
+
+- `secret_access_key` (String, Sensitive) Secret access key. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.

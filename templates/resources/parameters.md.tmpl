@@ -52,10 +52,48 @@ resource "warpgate_parameters" "global_settings" {
   lp_user_auto_unlock                      = true
   lp_user_lockout_duration_seconds         = 900
   lp_user_exempt_admins                    = true
-  ssh_banner                               = "Authorized access only"
-  web_ssh_enabled                          = true
+  banner                                   = "Authorized access only"
+  web_clients_enabled                      = true
   analytics_consent                        = "Off"
   analytics_normal                         = false
+
+  ssh_host_key_verification                = "AutoAccept"
+  web_auth_max_age_seconds                 = 28800
+  web_approval_grace_period_seconds        = 3600
+
+  recordings_enable                        = true
+  recordings_storage {
+    disk {
+      path = "/var/lib/warpgate/recordings"
+    }
+  }
+}
+```
+
+Recordings on S3-compatible object storage instead of a local disk:
+
+```hcl
+resource "warpgate_parameters" "main" {
+  allow_own_credential_management = true
+
+  recordings_enable = true
+  recordings_storage {
+    s3 {
+      bucket     = "warpgate-recordings"
+      region     = "us-east-1"
+      endpoint   = "https://minio.example.com"
+      path_style = true
+      prefix     = "sessions/"
+
+      static_credentials {
+        access_key_id     = var.s3_access_key_id
+        secret_access_key = var.s3_secret_access_key
+      }
+
+      # Or, to use the ambient AWS credential chain:
+      # auto_credentials {}
+    }
+  }
 }
 ```
 
@@ -93,10 +131,29 @@ The following arguments are supported:
 * `lp_user_auto_unlock` - (Optional) Automatically unlock users after the lockout duration.
 * `lp_user_lockout_duration_seconds` - (Optional) User lockout duration in seconds.
 * `lp_user_exempt_admins` - (Optional) Exempt administrators from user login protection lockouts.
-* `ssh_banner` - (Optional) Banner shown to SSH clients before authentication.
-* `web_ssh_enabled` - (Optional) Enable web-based SSH sessions.
+* `banner` - (Optional) Banner shown to clients before authentication.
+* `web_clients_enabled` - (Optional) Enable the web-based session clients.
 * `analytics_consent` - (Optional) Whether the instance reports anonymous usage analytics. Allowed values: `Undecided`, `Off`, `On`.
 * `analytics_normal` - (Optional) Enable the normal analytics payload level.
+* `ssh_host_key_verification` - (Optional) What to do when a target's SSH host key isn't in the known hosts list. Allowed values: `Prompt`, `AutoAccept`, `AutoReject`, `Ignore`.
+* `web_auth_max_age_seconds` - (Optional) How long a web login stays valid before reauthentication is required, in seconds.
+* `web_approval_grace_period_seconds` - (Optional) How long a remembered web approval stays valid, in seconds.
+* `recordings_enable` - (Optional) Record sessions.
+* `recordings_storage` - (Optional) Where session recordings are stored. Exactly one of the `disk` or `s3` blocks.
+  * `disk` - Local filesystem storage.
+    * `path` - (Required) Directory recordings are written to.
+  * `s3` - S3 or S3-compatible object storage.
+    * `bucket` - (Required) Bucket name.
+    * `region` - (Required) Bucket region.
+    * `endpoint` - (Optional) Custom endpoint for S3-compatible services. Empty means AWS.
+    * `path_style` - (Optional) Path-style addressing, required by most S3-compatible services.
+    * `prefix` - (Optional) Key prefix prepended to every object path.
+    * `auto_credentials` - (Optional) Authenticate with the ambient AWS credential chain. Conflicts with `static_credentials`.
+    * `static_credentials` - (Optional) Authenticate with an explicit key pair. Conflicts with `auto_credentials`.
+      * `access_key_id` - (Required) Access key ID.
+      * `secret_access_key` - (Optional) Secret access key. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.
+
+~> **Note** `recordings_enable` and `recordings_storage` require Warpgate 0.27 or newer, where recording storage moved out of `warpgate.yaml` into the database.
 
 ## Attribute Reference
 
