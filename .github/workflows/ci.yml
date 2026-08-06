@@ -71,6 +71,39 @@ jobs:
       - name: Test
         run: go test -v ./...
 
+  # Acceptance tests against a throwaway Warpgate. Unit tests cannot cover the
+  # cases that depend on real API behaviour, such as the fields the API redacts
+  # on read.
+  acceptance:
+    name: Acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # The SDK test harness drives a real Terraform CLI. Installing it here
+      # stops the harness downloading one at test time.
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_wrapper: false
+
+      # The script prints the `export KEY=value` lines the tests need.
+      - name: Start Warpgate
+        run: scripts/test-warpgate.sh start | sed 's/^export //' >> "$GITHUB_ENV"
+
+      - name: Acceptance tests
+        env:
+          TF_ACC: 1
+        run: go test -v ./internal/provider/ -run TestAcc -timeout 15m
+
+      - name: Warpgate log
+        if: failure()
+        run: cat /tmp/warpgate-acctest/warpgate.log || true
+
   # Ensure documentation is generated
   docs:
     name: Documentation
