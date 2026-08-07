@@ -7,7 +7,9 @@ description: |-
 
 # warpgate_ssh_key (Data Source)
 
-Use this data source to retrieve information about a specific Warpgate SSH key.
+Use this data source to retrieve public key information and metadata about a specific Warpgate SSH key.
+
+> **Security Note**: This data source only returns public key attributes (`public_key`, `public_key_base64`) and key metadata. Private key material is never returned by Warpgate or exposed through data sources.
 
 ## Example Usage
 

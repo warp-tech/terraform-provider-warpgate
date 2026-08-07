@@ -84,3 +84,23 @@ func TestDataSourceSSHOwnKeysSchema(t *testing.T) {
 		}
 	}
 }
+
+func TestDataSourceSSHKeyNeverExposesPrivateKey(t *testing.T) {
+	sensitiveFields := []string{"secret_key", "private_key", "secret", "private_key_pem"}
+
+	sSingle := dataSourceSSHKey()
+	for _, field := range sensitiveFields {
+		if _, ok := sSingle.Schema[field]; ok {
+			t.Fatalf("dataSourceSSHKey must never expose %q in schema", field)
+		}
+	}
+
+	sOwn := dataSourceSSHOwnKeys()
+	keysSchema := sOwn.Schema["keys"].Elem.(*schema.Resource)
+	for _, field := range sensitiveFields {
+		if _, ok := keysSchema.Schema[field]; ok {
+			t.Fatalf("dataSourceSSHOwnKeys must never expose %q in schema", field)
+		}
+	}
+}
+

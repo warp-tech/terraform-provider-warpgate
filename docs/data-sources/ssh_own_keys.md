@@ -7,7 +7,9 @@ description: |-
 
 # warpgate_ssh_own_keys (Data Source)
 
-Retrieves the SSH keys for the Warpgate server.
+Retrieves the list of SSH keys managed by the Warpgate server.
+
+> **Security Note**: This data source only returns public key attributes (`public_key`, `public_key_base64`) and key metadata. Private key material is never returned by Warpgate or exposed through data sources.
 
 ## Example Usage
 

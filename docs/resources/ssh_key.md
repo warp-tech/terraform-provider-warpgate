@@ -67,8 +67,23 @@ resource "warpgate_ssh_key" "custom_key" {
 
 ## Import
 
-Import is supported using the following syntax:
+SSH keys can be imported using their UUID `id`.
+
+### Declarative Import Block (Terraform 1.5+ / OpenTofu 1.6+)
+
+```hcl
+import {
+  to = warpgate_ssh_key.example
+  id = "12345678-1234-1234-1234-123456789012"
+}
+```
+
+### CLI Command (Terraform / OpenTofu)
 
 ```shell
-terraform import warpgate_ssh_key.example <ssh_key_id>
+# Using Terraform CLI
+terraform import warpgate_ssh_key.example 12345678-1234-1234-1234-123456789012
+
+# Using OpenTofu CLI
+tofu import warpgate_ssh_key.example 12345678-1234-1234-1234-123456789012
 ```
