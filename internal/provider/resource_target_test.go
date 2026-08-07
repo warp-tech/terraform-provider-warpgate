@@ -68,3 +68,75 @@ func TestSetTargetOptionsWithPostgresProtocolVersion(t *testing.T) {
 		t.Fatalf("expected protocol version 3.2, got %v", got)
 	}
 }
+
+func TestBuildSSHTargetOptionsWithKeyIDAndJumpHost(t *testing.T) {
+	opts, err := buildSSHTargetOptions(map[string]any{
+		"host":                 "ssh.example.com",
+		"port":                 22,
+		"username":             "root",
+		"allow_insecure_algos": true,
+		"jump_host":            "11111111-2222-3333-4444-555555555555",
+		"public_key_auth": []any{
+			map[string]any{
+				"key_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("buildSSHTargetOptions returned error: %v", err)
+	}
+
+	if opts.Host != "ssh.example.com" || opts.Port != 22 || opts.Username != "root" {
+		t.Fatalf("unexpected target options: %+v", opts)
+	}
+	if opts.JumpHost != "11111111-2222-3333-4444-555555555555" {
+		t.Fatalf("expected jump host ID, got %q", opts.JumpHost)
+	}
+
+	pkAuth, ok := opts.Auth.(*client.SSHTargetPublicKeyAuth)
+	if !ok {
+		t.Fatalf("expected SSHTargetPublicKeyAuth, got %T", opts.Auth)
+	}
+	if pkAuth.KeyID != "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" {
+		t.Fatalf("expected key ID aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee, got %q", pkAuth.KeyID)
+	}
+}
+
+func TestSetTargetOptionsWithSSHKeyIDAndJumpHost(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceTarget().Schema, map[string]any{})
+	err := setTargetOptions(d, &client.TargetSSHOptions{
+		Kind:               "Ssh",
+		Host:               "ssh.example.com",
+		Port:               22,
+		Username:           "root",
+		AllowInsecureAlgos: false,
+		JumpHost:           "11111111-2222-3333-4444-555555555555",
+		Auth: &client.SSHTargetPublicKeyAuth{
+			Kind:  "PublicKey",
+			KeyID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+		},
+	})
+	if err != nil {
+		t.Fatalf("setTargetOptions returned error: %v", err)
+	}
+
+	sshOptsList := d.Get("ssh_options").([]any)
+	if len(sshOptsList) != 1 {
+		t.Fatalf("expected 1 ssh_options block, got %d", len(sshOptsList))
+	}
+
+	sshOpts := sshOptsList[0].(map[string]any)
+	if got := sshOpts["jump_host"]; got != "11111111-2222-3333-4444-555555555555" {
+		t.Fatalf("expected jump_host 11111111-2222-3333-4444-555555555555, got %v", got)
+	}
+
+	pkAuthList := sshOpts["public_key_auth"].([]any)
+	if len(pkAuthList) != 1 {
+		t.Fatalf("expected 1 public_key_auth block, got %d", len(pkAuthList))
+	}
+	pkAuth := pkAuthList[0].(map[string]any)
+	if got := pkAuth["key_id"]; got != "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" {
+		t.Fatalf("expected key_id aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee, got %v", got)
+	}
+}
+

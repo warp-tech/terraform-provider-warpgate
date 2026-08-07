@@ -35,6 +35,10 @@ type Target struct {
 	RateLimitBytesPerSecond *int          `json:"rate_limit_bytes_per_second,omitempty"`
 	AllowRoles              []string      `json:"allow_roles"`
 	Options                 TargetOptions `json:"options"`
+	TicketMaxDurationSeconds *int64       `json:"ticket_max_duration_seconds,omitempty"`
+	TicketRequestsDisabled  *bool         `json:"ticket_requests_disabled,omitempty"`
+	TicketRequireApproval   *bool         `json:"ticket_require_approval,omitempty"`
+	TicketMaxUses           *int          `json:"ticket_max_uses,omitempty"`
 }
 
 // TargetOptions is a wrapper for the different target option types
@@ -51,6 +55,12 @@ type SSHTargetPasswordAuth struct {
 
 // SSHTargetPublicKeyAuth represents public key authentication for SSH targets
 type SSHTargetPublicKeyAuth struct {
+	Kind  string `json:"kind"`
+	KeyID string `json:"key_id,omitempty"`
+}
+
+// SSHTargetIamRoleAuth represents IAM role authentication for SSH targets
+type SSHTargetIamRoleAuth struct {
 	Kind string `json:"kind"`
 }
 
@@ -62,6 +72,7 @@ type TargetSSHOptions struct {
 	Username           string        `json:"username"`
 	AllowInsecureAlgos bool          `json:"allow_insecure_algos,omitempty"`
 	Auth               SSHTargetAuth `json:"auth"`
+	JumpHost           string        `json:"jump_host,omitempty"`
 }
 
 // TargetHTTPOptions represents options for HTTP targets
@@ -126,6 +137,10 @@ type TargetDataRequest struct {
 	GroupId                 string        `json:"group_id,omitempty"`
 	RateLimitBytesPerSecond *int          `json:"rate_limit_bytes_per_second,omitempty"`
 	Options                 TargetOptions `json:"options"`
+	TicketMaxDurationSeconds *int64       `json:"ticket_max_duration_seconds,omitempty"`
+	TicketRequestsDisabled  *bool         `json:"ticket_requests_disabled,omitempty"`
+	TicketRequireApproval   *bool         `json:"ticket_require_approval,omitempty"`
+	TicketMaxUses           *int          `json:"ticket_max_uses,omitempty"`
 }
 
 // GetTargets retrieves all targets from the Warpgate API, optionally filtered by

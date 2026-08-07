@@ -45,6 +45,26 @@ func dataSourceTarget() *schema.Resource {
 				Computed:    true,
 				Description: "Bandwidth limit in bytes per second",
 			},
+			"ticket_max_duration_seconds": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "Maximum ticket duration in seconds for this target",
+			},
+			"ticket_requests_disabled": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Whether ticket requests are disabled for this target",
+			},
+			"ticket_require_approval": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Whether ticket requests require manual approval",
+			},
+			"ticket_max_uses": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "Maximum number of uses allowed per ticket",
+			},
 			"allow_roles": {
 				Type:        schema.TypeList,
 				Computed:    true,
@@ -80,6 +100,11 @@ func dataSourceTarget() *schema.Resource {
 							Computed:    true,
 							Description: "Allow insecure SSH algorithms",
 						},
+						"jump_host": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "ID of another target to use as an SSH jump host",
+						},
 						"password_auth": {
 							Type:        schema.TypeList,
 							Computed:    true,
@@ -99,6 +124,20 @@ func dataSourceTarget() *schema.Resource {
 							Type:        schema.TypeList,
 							Computed:    true,
 							Description: "Public key authentication for SSH",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key_id": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Specific stored client key ID to authenticate with",
+									},
+								},
+							},
+						},
+						"iam_role_auth": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "IAM Role authentication for SSH",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{},
 							},
@@ -399,6 +438,22 @@ func dataSourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any)
 
 	if err := d.Set("allow_roles", target.AllowRoles); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set allow_roles: %w", err))
+	}
+
+	if err := setOptionalInt64(d, "ticket_max_duration_seconds", target.TicketMaxDurationSeconds); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_max_duration_seconds: %w", err))
+	}
+
+	if err := setOptionalBool(d, "ticket_requests_disabled", target.TicketRequestsDisabled); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_requests_disabled: %w", err))
+	}
+
+	if err := setOptionalBool(d, "ticket_require_approval", target.TicketRequireApproval); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_require_approval: %w", err))
+	}
+
+	if err := setOptionalInt(d, "ticket_max_uses", target.TicketMaxUses); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_max_uses: %w", err))
 	}
 
 	// Set the appropriate options block based on target type

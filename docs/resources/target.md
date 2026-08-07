@@ -152,6 +152,10 @@ The following arguments are supported:
 * `description` - (Optional) A human-readable description of the target.
 * `group_id` - (Optional) The ID of the target group this target is assigned to.
 * `rate_limit_bytes_per_second` - (Optional) Bandwidth limit in bytes per second.
+* `ticket_max_duration_seconds` - (Optional) Maximum ticket duration in seconds for this target.
+* `ticket_requests_disabled` - (Optional) Whether ticket requests are disabled for this target.
+* `ticket_require_approval` - (Optional) Whether ticket requests require manual approval.
+* `ticket_max_uses` - (Optional) Maximum number of uses allowed per ticket.
 
 One of the following option blocks must be specified:
 
@@ -160,9 +164,12 @@ One of the following option blocks must be specified:
   * `port` - (Required) The SSH server port.
   * `username` - (Required) The SSH username.
   * `allow_insecure_algos` - (Optional) Allow insecure SSH algorithms. Default: `false`.
-  * `password_auth` - (Optional) Password authentication for SSH. Conflicts with `public_key_auth`.
+  * `jump_host` - (Optional) ID of another target to use as an SSH jump host.
+  * `password_auth` - (Optional) Password authentication for SSH. Conflicts with `public_key_auth` and `iam_role_auth`.
     * `password` - (Required) The password for SSH authentication.
-  * `public_key_auth` - (Optional) Public key authentication for SSH. Conflicts with `password_auth`. No additional properties needed.
+  * `public_key_auth` - (Optional) Public key authentication for SSH. Conflicts with `password_auth` and `iam_role_auth`.
+    * `key_id` - (Optional) Specific stored client key ID (`warpgate_ssh_key.id`) to authenticate with. Omitted uses default keys.
+  * `iam_role_auth` - (Optional) AWS IAM Role authentication for SSH. Conflicts with `password_auth` and `public_key_auth`.
 
 * `http_options` - (Optional) HTTP target configuration block.
   * `url` - (Required) The HTTP server URL.

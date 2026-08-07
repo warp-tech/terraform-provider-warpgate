@@ -54,6 +54,30 @@ func resourceTarget() *schema.Resource {
 				Description:  "Bandwidth limit in bytes per second",
 				ValidateFunc: validation.IntAtLeast(0),
 			},
+			"ticket_max_duration_seconds": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Maximum ticket duration in seconds for this target",
+			},
+			"ticket_requests_disabled": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether ticket requests are disabled for this target",
+			},
+			"ticket_require_approval": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether ticket requests require manual approval",
+			},
+			"ticket_max_uses": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Maximum number of uses allowed per ticket",
+			},
 			// SSH Target Configuration
 			"ssh_options": {
 				Type:          schema.TypeList,
@@ -85,11 +109,16 @@ func resourceTarget() *schema.Resource {
 							Default:     false,
 							Description: "Allow insecure SSH algorithms",
 						},
+						"jump_host": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "ID of another target to use as an SSH jump host",
+						},
 						"password_auth": {
 							Type:          schema.TypeList,
 							Optional:      true,
 							MaxItems:      1,
-							ConflictsWith: []string{"ssh_options.0.public_key_auth"},
+							ConflictsWith: []string{"ssh_options.0.public_key_auth", "ssh_options.0.iam_role_auth"},
 							Description:   "Password authentication for SSH",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -106,8 +135,24 @@ func resourceTarget() *schema.Resource {
 							Type:          schema.TypeList,
 							Optional:      true,
 							MaxItems:      1,
-							ConflictsWith: []string{"ssh_options.0.password_auth"},
+							ConflictsWith: []string{"ssh_options.0.password_auth", "ssh_options.0.iam_role_auth"},
 							Description:   "Public key authentication for SSH",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key_id": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "Specific stored client key ID to authenticate with. If omitted, default keys are used.",
+									},
+								},
+							},
+						},
+						"iam_role_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							MaxItems:      1,
+							ConflictsWith: []string{"ssh_options.0.password_auth", "ssh_options.0.public_key_auth"},
+							Description:   "IAM Role authentication for SSH",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{},
 							},
@@ -454,6 +499,22 @@ func resourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any) d
 		return diag.FromErr(fmt.Errorf("failed to set allow_roles: %w", err))
 	}
 
+	if err := setOptionalInt64(d, "ticket_max_duration_seconds", target.TicketMaxDurationSeconds); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_max_duration_seconds: %w", err))
+	}
+
+	if err := setOptionalBool(d, "ticket_requests_disabled", target.TicketRequestsDisabled); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_requests_disabled: %w", err))
+	}
+
+	if err := setOptionalBool(d, "ticket_require_approval", target.TicketRequireApproval); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_require_approval: %w", err))
+	}
+
+	if err := setOptionalInt(d, "ticket_max_uses", target.TicketMaxUses); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set ticket_max_uses: %w", err))
+	}
+
 	// Set the appropriate options block based on target type
 	if err := setTargetOptions(d, target.Options); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set target options: %w", err))
@@ -509,11 +570,15 @@ func buildTargetDataRequest(d *schema.ResourceData) (*client.TargetDataRequest, 
 	}
 
 	return &client.TargetDataRequest{
-		Name:                    d.Get("name").(string),
-		Description:             d.Get("description").(string),
-		GroupId:                 d.Get("group_id").(string),
-		RateLimitBytesPerSecond: optionalIntPointer(d, rateLimitBytesPerSecondKey),
-		Options:                 targetOptions,
+		Name:                     d.Get("name").(string),
+		Description:              d.Get("description").(string),
+		GroupId:                  d.Get("group_id").(string),
+		RateLimitBytesPerSecond:  optionalIntPointer(d, rateLimitBytesPerSecondKey),
+		Options:                  targetOptions,
+		TicketMaxDurationSeconds: optionalInt64Pointer(d, "ticket_max_duration_seconds"),
+		TicketRequestsDisabled:   optionalBoolPointer(d, "ticket_requests_disabled"),
+		TicketRequireApproval:    optionalBoolPointer(d, "ticket_require_approval"),
+		TicketMaxUses:            optionalIntPointer(d, "ticket_max_uses"),
 	}, nil
 }
 
@@ -553,12 +618,17 @@ func buildTargetOptions(d *schema.ResourceData) (client.TargetOptions, error) {
 	return nil, fmt.Errorf("no target options specified")
 }
 
-// buildSshTargetOptions creates SSH target options from the resource data map.
+// buildSSHTargetOptions creates SSH target options from the resource data map.
 func buildSSHTargetOptions(opts map[string]any) (*client.TargetSSHOptions, error) {
 	host := opts["host"].(string)
 	port := opts["port"].(int)
 	username := opts["username"].(string)
 	allowInsecureAlgos := opts["allow_insecure_algos"].(bool)
+
+	var jumpHost string
+	if jh, ok := opts["jump_host"]; ok && jh != nil {
+		jumpHost = jh.(string)
+	}
 
 	// Determine which auth method is being used
 	var auth client.SSHTargetAuth
@@ -571,11 +641,21 @@ func buildSSHTargetOptions(opts map[string]any) (*client.TargetSSHOptions, error
 			Password: password,
 		}
 	} else if v, ok := opts["public_key_auth"]; ok && len(v.([]any)) > 0 {
+		pkAuth := v.([]any)[0].(map[string]any)
+		var keyID string
+		if k, ok := pkAuth["key_id"]; ok && k != nil {
+			keyID = k.(string)
+		}
 		auth = &client.SSHTargetPublicKeyAuth{
-			Kind: "PublicKey",
+			Kind:  "PublicKey",
+			KeyID: keyID,
+		}
+	} else if v, ok := opts["iam_role_auth"]; ok && len(v.([]any)) > 0 {
+		auth = &client.SSHTargetIamRoleAuth{
+			Kind: "IamRole",
 		}
 	} else {
-		return nil, fmt.Errorf("SSH target requires either password_auth or public_key_auth")
+		return nil, fmt.Errorf("SSH target requires password_auth, public_key_auth, or iam_role_auth")
 	}
 
 	return &client.TargetSSHOptions{
@@ -585,6 +665,7 @@ func buildSSHTargetOptions(opts map[string]any) (*client.TargetSSHOptions, error
 		Username:           username,
 		AllowInsecureAlgos: allowInsecureAlgos,
 		Auth:               auth,
+		JumpHost:           jumpHost,
 	}, nil
 }
 
@@ -790,6 +871,10 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 			"allow_insecure_algos": optionsMap["allow_insecure_algos"],
 		}
 
+		if jumpHost, ok := optionsMap["jump_host"].(string); ok && jumpHost != "" {
+			sshOpts["jump_host"] = jumpHost
+		}
+
 		// Handle auth block
 		auth, ok := optionsMap["auth"].(map[string]any)
 		if !ok {
@@ -809,7 +894,13 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 				},
 			}
 		case "PublicKey":
-			sshOpts["public_key_auth"] = []any{
+			pkAuthMap := map[string]any{}
+			if keyID, ok := auth["key_id"].(string); ok && keyID != "" {
+				pkAuthMap["key_id"] = keyID
+			}
+			sshOpts["public_key_auth"] = []any{pkAuthMap}
+		case "IamRole":
+			sshOpts["iam_role_auth"] = []any{
 				map[string]any{},
 			}
 		default:
