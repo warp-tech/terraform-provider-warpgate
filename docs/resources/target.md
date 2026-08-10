@@ -244,6 +244,10 @@ tofu import warpgate_target.web_server 12345678-1234-1234-1234-123456789012
 - `postgres_options` (Block List, Max: 1) PostgreSQL target options (see [below for nested schema](#nestedblock--postgres_options))
 - `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
 - `ssh_options` (Block List, Max: 1) SSH target options (see [below for nested schema](#nestedblock--ssh_options))
+- `ticket_max_duration_seconds` (Number) Maximum ticket duration in seconds for this target
+- `ticket_max_uses` (Number) Maximum number of uses allowed per ticket
+- `ticket_requests_disabled` (Boolean) Whether ticket requests are disabled for this target
+- `ticket_require_approval` (Boolean) Whether ticket requests require manual approval
 
 ### Read-Only
 
@@ -375,8 +379,14 @@ Required:
 Optional:
 
 - `allow_insecure_algos` (Boolean) Allow insecure SSH algorithms
+- `iam_role_auth` (Block List, Max: 1) IAM Role authentication for SSH (see [below for nested schema](#nestedblock--ssh_options--iam_role_auth))
+- `jump_host` (String) ID of another target to use as an SSH jump host
 - `password_auth` (Block List, Max: 1) Password authentication for SSH (see [below for nested schema](#nestedblock--ssh_options--password_auth))
 - `public_key_auth` (Block List, Max: 1) Public key authentication for SSH (see [below for nested schema](#nestedblock--ssh_options--public_key_auth))
+
+<a id="nestedblock--ssh_options--iam_role_auth"></a>
+### Nested Schema for `ssh_options.iam_role_auth`
+
 
 <a id="nestedblock--ssh_options--password_auth"></a>
 ### Nested Schema for `ssh_options.password_auth`
@@ -388,3 +398,7 @@ Required:
 
 <a id="nestedblock--ssh_options--public_key_auth"></a>
 ### Nested Schema for `ssh_options.public_key_auth`
+
+Optional:
+
+- `key_id` (String) Specific stored client key ID to authenticate with. If omitted, default keys are used.

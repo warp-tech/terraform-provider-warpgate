@@ -17,18 +17,18 @@ func dataSourceSSHKey() *schema.Resource {
 		Description: "Retrieves details of a specific Warpgate SSH key by ID or label.",
 		Schema: map[string]*schema.Schema{
 			"id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Computed:      true,
-				Description:   "The ID of the SSH key",
-				AtLeastOneOf:  []string{"id", "label"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "The ID of the SSH key",
+				AtLeastOneOf: []string{"id", "label"},
 			},
 			"label": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Computed:      true,
-				Description:   "The label of the SSH key",
-				AtLeastOneOf:  []string{"id", "label"},
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "The label of the SSH key",
+				AtLeastOneOf: []string{"id", "label"},
 			},
 			"kind": {
 				Type:        schema.TypeString,

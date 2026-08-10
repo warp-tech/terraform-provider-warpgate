@@ -38,10 +38,23 @@ In addition to all arguments above, the following attributes are exported:
 
 ## Import
 
-Roles can be imported using their ID:
+### Declarative Import Block (Terraform 1.5+ / OpenTofu 1.6+)
 
+```hcl
+import {
+  to = warpgate_role.developers
+  id = "12345678-1234-1234-1234-123456789012"
+}
 ```
-$ terraform import warpgate_role.developers 12345678-1234-1234-1234-123456789012
+
+### CLI Command (Terraform / OpenTofu)
+
+```shell
+# Using Terraform CLI
+terraform import warpgate_role.developers 12345678-1234-1234-1234-123456789012
+
+# Using OpenTofu CLI
+tofu import warpgate_role.developers 12345678-1234-1234-1234-123456789012
 ```
 
 {{ .SchemaMarkdown | trimspace }}

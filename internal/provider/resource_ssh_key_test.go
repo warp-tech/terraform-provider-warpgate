@@ -103,4 +103,3 @@ func TestDataSourceSSHKeyNeverExposesPrivateKey(t *testing.T) {
 		}
 	}
 }
-

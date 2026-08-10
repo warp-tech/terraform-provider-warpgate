@@ -106,10 +106,25 @@ In addition to all arguments above, the following attributes are exported:
 
 ## Import
 
-Parameters can be imported with a dummy ID:
+Parameters can be imported with a dummy ID (e.g. `parameters`).
 
+### Declarative Import Block (Terraform 1.5+ / OpenTofu 1.6+)
+
+```hcl
+import {
+  to = warpgate_parameters.global_settings
+  id = "parameters"
+}
 ```
-$ terraform import warpgate_parameters.global_settings parameters
+
+### CLI Command (Terraform / OpenTofu)
+
+```shell
+# Using Terraform CLI
+terraform import warpgate_parameters.global_settings parameters
+
+# Using OpenTofu CLI
+tofu import warpgate_parameters.global_settings parameters
 ```
 
 {{ .SchemaMarkdown | trimspace }}

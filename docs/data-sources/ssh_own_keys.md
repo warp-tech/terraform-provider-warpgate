@@ -52,8 +52,8 @@ The following attributes are exported:
 Read-Only:
 
 - `id` (String)
-- `label` (String)
+- `is_default` (Boolean)
 - `kind` (String)
+- `label` (String)
 - `public_key` (String)
 - `public_key_base64` (String)
-- `is_default` (Boolean)

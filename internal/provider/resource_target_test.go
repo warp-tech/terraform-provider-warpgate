@@ -139,4 +139,3 @@ func TestSetTargetOptionsWithSSHKeyIDAndJumpHost(t *testing.T) {
 		t.Fatalf("expected key_id aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee, got %v", got)
 	}
 }
-

@@ -157,6 +157,10 @@ Based on the target type, one of the following option blocks will be populated:
 - `postgres_options` (List of Object) PostgreSQL target options (see [below for nested schema](#nestedatt--postgres_options))
 - `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
 - `ssh_options` (List of Object) SSH target options (see [below for nested schema](#nestedatt--ssh_options))
+- `ticket_max_duration_seconds` (Number) Maximum ticket duration in seconds for this target
+- `ticket_max_uses` (Number) Maximum number of uses allowed per ticket
+- `ticket_requests_disabled` (Boolean) Whether ticket requests are disabled for this target
+- `ticket_require_approval` (Boolean) Whether ticket requests require manual approval
 
 <a id="nestedatt--http_options"></a>
 ### Nested Schema for `http_options`
@@ -266,10 +270,19 @@ Read-Only:
 
 - `allow_insecure_algos` (Boolean)
 - `host` (String)
+- `iam_role_auth` (List of Object) (see [below for nested schema](#nestedobjatt--ssh_options--iam_role_auth))
+- `jump_host` (String)
 - `password_auth` (List of Object) (see [below for nested schema](#nestedobjatt--ssh_options--password_auth))
 - `port` (Number)
 - `public_key_auth` (List of Object) (see [below for nested schema](#nestedobjatt--ssh_options--public_key_auth))
 - `username` (String)
+
+<a id="nestedobjatt--ssh_options--iam_role_auth"></a>
+### Nested Schema for `ssh_options.iam_role_auth`
+
+Read-Only:
+
+
 
 <a id="nestedobjatt--ssh_options--password_auth"></a>
 ### Nested Schema for `ssh_options.password_auth`
@@ -283,3 +296,5 @@ Read-Only:
 ### Nested Schema for `ssh_options.public_key_auth`
 
 Read-Only:
+
+- `key_id` (String)

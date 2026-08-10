@@ -121,10 +121,23 @@ Common SSO providers include:
 
 ## Import
 
-Users can be imported using their ID:
+### Declarative Import Block (Terraform 1.5+ / OpenTofu 1.6+)
 
+```hcl
+import {
+  to = warpgate_user.eugene
+  id = "12345678-1234-1234-1234-123456789012"
+}
 ```
-$ terraform import warpgate_user.eugene 12345678-1234-1234-1234-123456789012
+
+### CLI Command (Terraform / OpenTofu)
+
+```shell
+# Using Terraform CLI
+terraform import warpgate_user.eugene 12345678-1234-1234-1234-123456789012
+
+# Using OpenTofu CLI
+tofu import warpgate_user.eugene 12345678-1234-1234-1234-123456789012
 ```
 
 {{ .SchemaMarkdown | trimspace }}
