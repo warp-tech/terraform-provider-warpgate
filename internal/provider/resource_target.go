@@ -59,7 +59,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"http_options", "mysql_options", "postgres_options", "kubernetes_options"},
+				ConflictsWith: []string{"http_options", "mysql_options", "postgres_options", "kubernetes_options", "rdp_options"},
 				Description:   "SSH target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -120,7 +120,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "mysql_options", "postgres_options", "kubernetes_options"},
+				ConflictsWith: []string{"ssh_options", "mysql_options", "postgres_options", "kubernetes_options", "rdp_options"},
 				Description:   "HTTP target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -172,7 +172,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "postgres_options", "kubernetes_options"},
+				ConflictsWith: []string{"ssh_options", "http_options", "postgres_options", "kubernetes_options", "rdp_options"},
 				Description:   "MySQL target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -226,7 +226,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "kubernetes_options"},
+				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "kubernetes_options", "rdp_options"},
 				Description:   "PostgreSQL target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -291,7 +291,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "postgres_options"},
+				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "rdp_options"},
 				Description:   "Kubernetes target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -364,6 +364,59 @@ func resourceTarget() *schema.Resource {
 					},
 				},
 			},
+			// RDP Target Configuration
+			"rdp_options": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "kubernetes_options"},
+				Description:   "RDP target options",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The RDP server hostname or IP address",
+						},
+						"port": {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      3389,
+							Description:  "The RDP server port",
+							ValidateFunc: validation.IsPortNumber,
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The RDP username",
+						},
+						"domain": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The RDP authentication domain (Windows domain)",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Sensitive:   true,
+							Description: "The password for RDP authentication",
+						},
+						"verify_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Verify the RDP server's TLS certificate",
+						},
+						"tls_security": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "Tls12",
+							ValidateFunc: validation.StringInSlice([]string{"Tls12", "Tls12WithLegacyCiphers", "Tls10Unsafe"}, false),
+							Description:  "TLS security profile for the RDP connection: Tls12, Tls12WithLegacyCiphers, Tls10Unsafe",
+						},
+					},
+				},
+			},
 		},
 		CustomizeDiff: validateTargetConfig,
 	}
@@ -372,7 +425,7 @@ func resourceTarget() *schema.Resource {
 // validateTargetConfig validates the target configuration in a Terraform resource diff,
 // ensuring that exactly one type of target option is specified.
 func validateTargetConfig(ctx context.Context, d *schema.ResourceDiff, meta any) error {
-	optionBlocks := []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "kubernetes_options"}
+	optionBlocks := []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "kubernetes_options", "rdp_options"}
 
 	count := 0
 	for _, block := range optionBlocks {
@@ -382,11 +435,11 @@ func validateTargetConfig(ctx context.Context, d *schema.ResourceDiff, meta any)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("one of ssh_options, http_options, mysql_options, postgres_options, or kubernetes_options must be specified")
+		return fmt.Errorf("one of ssh_options, http_options, mysql_options, postgres_options, kubernetes_options, or rdp_options must be specified")
 	}
 
 	if count > 1 {
-		return fmt.Errorf("only one of ssh_options, http_options, mysql_options, postgres_options, or kubernetes_options can be specified")
+		return fmt.Errorf("only one of ssh_options, http_options, mysql_options, postgres_options, kubernetes_options, or rdp_options can be specified")
 	}
 
 	return nil
@@ -548,6 +601,12 @@ func buildTargetOptions(d *schema.ResourceData) (client.TargetOptions, error) {
 	if v, ok := d.GetOk("kubernetes_options"); ok && len(v.([]any)) > 0 {
 		k8sOpts := v.([]any)[0].(map[string]any)
 		return buildKubernetesTargetOptions(k8sOpts)
+	}
+
+	// Check for RDP options
+	if v, ok := d.GetOk("rdp_options"); ok && len(v.([]any)) > 0 {
+		rdpOpts := v.([]any)[0].(map[string]any)
+		return buildRDPTargetOptions(rdpOpts)
 	}
 
 	return nil, fmt.Errorf("no target options specified")
@@ -746,6 +805,42 @@ func buildKubernetesTargetOptions(opts map[string]any) (*client.TargetKubernetes
 	}, nil
 }
 
+// buildRDPTargetOptions creates RDP target options from the resource data map.
+func buildRDPTargetOptions(opts map[string]any) (*client.TargetRDPOptions, error) {
+	host := opts["host"].(string)
+	port := opts["port"].(int)
+	username := opts["username"].(string)
+	password := opts["password"].(string)
+
+	var domain string
+	if v, ok := opts["domain"]; ok {
+		domain = v.(string)
+	}
+
+	verifyTLS := opts["verify_tls"].(bool)
+
+	var tlsSecurity string
+	if v, ok := opts["tls_security"]; ok {
+		tlsSecurity = v.(string)
+	}
+
+	auth := &client.RDPTargetPasswordAuth{
+		Kind:     "Password",
+		Password: password,
+	}
+
+	return &client.TargetRDPOptions{
+		Kind:        "Rdp",
+		Host:        host,
+		Port:        port,
+		Username:    username,
+		Domain:      domain,
+		Auth:        auth,
+		VerifyTLS:   verifyTLS,
+		TLSSecurity: tlsSecurity,
+	}, nil
+}
+
 // setTargetOptions populates the appropriate Terraform schema block based on the target type
 // from the Warpgate API.
 func setTargetOptions(d *schema.ResourceData, options any) error {
@@ -768,6 +863,10 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 
 	if err := d.Set("kubernetes_options", []any{}); err != nil {
 		return fmt.Errorf("failed to reset kubernetes_options: %w", err)
+	}
+
+	if err := d.Set("rdp_options", []any{}); err != nil {
+		return fmt.Errorf("failed to reset rdp_options: %w", err)
 	}
 
 	// Type assertion based on the "kind" field in the options map
@@ -958,6 +1057,36 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 		}
 
 		return d.Set("kubernetes_options", []any{k8sOpts})
+
+	case "Rdp":
+		rdpOpts := map[string]any{
+			"host":       optionsMap["host"],
+			"port":       optionsMap["port"],
+			"username":   optionsMap["username"],
+			"verify_tls": optionsMap["verify_tls"],
+			// The API omits tls_security when unset; fall back to the schema
+			// default so an unset value does not read back as a diff.
+			"tls_security": "Tls12",
+		}
+
+		if tlsSecurity, ok := optionsMap["tls_security"].(string); ok && tlsSecurity != "" {
+			rdpOpts["tls_security"] = tlsSecurity
+		}
+
+		if domain, ok := optionsMap["domain"].(string); ok && domain != "" {
+			rdpOpts["domain"] = domain
+		}
+
+		auth, ok := optionsMap["auth"].(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid auth field in RDP options")
+		}
+
+		if password, ok := auth["password"].(string); ok && password != "" {
+			rdpOpts["password"] = password
+		}
+
+		return d.Set("rdp_options", []any{rdpOpts})
 
 	default:
 		return fmt.Errorf("unknown target kind: %s", kind)

@@ -144,6 +144,25 @@ resource "warpgate_target" "k8s_cluster_cert" {
 }
 ```
 
+### RDP Target
+
+```hcl
+resource "warpgate_target" "windows_server" {
+  name        = "windows-server"
+  description = "Windows server via RDP"
+
+  rdp_options {
+    host         = "10.0.0.10"
+    port         = 3389
+    username     = "Administrator"
+    password     = "supersecret"
+    domain       = "CORP"
+    verify_tls   = false
+    tls_security = "Tls12"
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -192,6 +211,15 @@ One of the following option blocks must be specified:
     * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
     * `verify` - (Required) Verify TLS certificates.
 
+* `rdp_options` - (Optional) RDP target configuration block.
+  * `host` - (Required) The RDP server hostname or IP address.
+  * `port` - (Optional) The RDP server port. Default: `3389`.
+  * `username` - (Required) The RDP username.
+  * `domain` - (Optional) The Windows domain for RDP authentication.
+  * `password` - (Required) The password for RDP authentication.
+  * `verify_tls` - (Optional) Verify the RDP server's TLS certificate. RDP servers commonly use self-signed certificates, hence the default. Default: `false`.
+  * `tls_security` - (Optional) TLS security profile. Valid values: `Tls12`, `Tls12WithLegacyCiphers`, `Tls10Unsafe`. Default: `Tls12`.
+
 ## Attribute Reference
 
 In addition to all arguments above, the following attributes are exported:
@@ -223,6 +251,7 @@ $ terraform import warpgate_target.web_server 12345678-1234-1234-1234-1234567890
 - `mysql_options` (Block List, Max: 1) MySQL target options (see [below for nested schema](#nestedblock--mysql_options))
 - `postgres_options` (Block List, Max: 1) PostgreSQL target options (see [below for nested schema](#nestedblock--postgres_options))
 - `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
+- `rdp_options` (Block List, Max: 1) RDP target options (see [below for nested schema](#nestedblock--rdp_options))
 - `ssh_options` (Block List, Max: 1) SSH target options (see [below for nested schema](#nestedblock--ssh_options))
 
 ### Read-Only
@@ -341,6 +370,23 @@ Required:
 - `mode` (String) TLS mode (Disabled, Preferred, Required)
 - `verify` (Boolean) Verify TLS certificates
 
+
+
+<a id="nestedblock--rdp_options"></a>
+### Nested Schema for `rdp_options`
+
+Required:
+
+- `host` (String) The RDP server hostname or IP address
+- `password` (String, Sensitive) The password for RDP authentication
+- `username` (String) The RDP username
+
+Optional:
+
+- `domain` (String) The RDP authentication domain (Windows domain)
+- `port` (Number) The RDP server port
+- `tls_security` (String) TLS security profile for the RDP connection: Tls12, Tls12WithLegacyCiphers, Tls10Unsafe
+- `verify_tls` (Boolean) Verify the RDP server's TLS certificate
 
 
 <a id="nestedblock--ssh_options"></a>
