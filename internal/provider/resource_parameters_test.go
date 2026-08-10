@@ -3,7 +3,9 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/warp-tech/terraform-provider-warpgate/internal/client"
 )
 
@@ -210,5 +212,81 @@ func TestFlattenRecordingsStorageUnknownKind(t *testing.T) {
 
 	if got := flattenRecordingsStorage(d, client.RecordingsStorageConfig{Kind: "Tape"}); got != nil {
 		t.Fatalf("expected nil for an unknown kind, got %+v", got)
+	}
+}
+
+func validateParameters(t *testing.T, storage []any) diag.Diagnostics {
+	t.Helper()
+
+	raw := map[string]any{"allow_own_credential_management": true}
+	if storage != nil {
+		raw["recordings_storage"] = storage
+	}
+
+	return resourceParameters().Validate(terraform.NewResourceConfigRaw(raw))
+}
+
+func TestValidateRecordingsStorageRequiresExactlyOneKind(t *testing.T) {
+	// Neither disk nor s3: caught at validate rather than as an opaque
+	// apply-time API error.
+	if diags := validateParameters(t, []any{map[string]any{}}); !diags.HasError() {
+		t.Fatal("expected an error for a recordings_storage block with no storage kind")
+	}
+
+	if diags := validateParameters(t, []any{
+		map[string]any{
+			"disk": []any{map[string]any{"path": "/rec"}},
+			"s3": []any{map[string]any{
+				"bucket":           "b",
+				"region":           "r",
+				"auto_credentials": []any{map[string]any{}},
+			}},
+		},
+	}); !diags.HasError() {
+		t.Fatal("expected an error for both disk and s3")
+	}
+
+	if diags := validateParameters(t, []any{
+		map[string]any{"disk": []any{map[string]any{"path": "/rec"}}},
+	}); diags.HasError() {
+		t.Fatalf("expected a disk-only config to validate, got %+v", diags)
+	}
+}
+
+func TestValidateS3RequiresExactlyOneCredentialsMode(t *testing.T) {
+	s3 := func(creds map[string]any) []any {
+		block := map[string]any{"bucket": "b", "region": "r"}
+		for k, v := range creds {
+			block[k] = v
+		}
+
+		return []any{map[string]any{"s3": []any{block}}}
+	}
+
+	// The API requires the credentials field, so an s3 block without one
+	// would be rejected at apply time with a bare HTTP 400.
+	if diags := validateParameters(t, s3(nil)); !diags.HasError() {
+		t.Fatal("expected an error for an s3 block with no credentials")
+	}
+
+	if diags := validateParameters(t, s3(map[string]any{
+		"auto_credentials": []any{map[string]any{}},
+		"static_credentials": []any{
+			map[string]any{"access_key_id": "AKIA"},
+		},
+	})); !diags.HasError() {
+		t.Fatal("expected an error for both credential modes")
+	}
+
+	if diags := validateParameters(t, s3(map[string]any{
+		"auto_credentials": []any{map[string]any{}},
+	})); diags.HasError() {
+		t.Fatalf("expected an auto_credentials config to validate, got %+v", diags)
+	}
+}
+
+func TestValidateAbsentRecordingsStorage(t *testing.T) {
+	if diags := validateParameters(t, nil); diags.HasError() {
+		t.Fatalf("expected a config without recordings_storage to validate, got %+v", diags)
 	}
 }

@@ -136,7 +136,7 @@ The following arguments are supported:
 * `analytics_consent` - (Optional) Whether the instance reports anonymous usage analytics. Allowed values: `Undecided`, `Off`, `On`.
 * `analytics_normal` - (Optional) Enable the normal analytics payload level.
 * `ssh_host_key_verification` - (Optional) What to do when a target's SSH host key isn't in the known hosts list. Allowed values: `Prompt`, `AutoAccept`, `AutoReject`, `Ignore`.
-* `web_auth_max_age_seconds` - (Optional) How long a web login stays valid before reauthentication is required, in seconds.
+* `web_auth_max_age_seconds` - (Optional) How long a web login stays valid before reauthentication is required, in seconds. Must be at least 1; unset means reauthentication is never required.
 * `web_approval_grace_period_seconds` - (Optional) How long a remembered web approval stays valid, in seconds.
 * `recordings_enable` - (Optional) Record sessions.
 * `recordings_storage` - (Optional) Where session recordings are stored. Exactly one of the `disk` or `s3` blocks.
@@ -148,8 +148,8 @@ The following arguments are supported:
     * `endpoint` - (Optional) Custom endpoint for S3-compatible services. Empty means AWS.
     * `path_style` - (Optional) Path-style addressing, required by most S3-compatible services.
     * `prefix` - (Optional) Key prefix prepended to every object path.
-    * `auto_credentials` - (Optional) Authenticate with the ambient AWS credential chain. Conflicts with `static_credentials`.
-    * `static_credentials` - (Optional) Authenticate with an explicit key pair. Conflicts with `auto_credentials`.
+    * `auto_credentials` - Authenticate with the ambient AWS credential chain. Exactly one of `auto_credentials` or `static_credentials` is required.
+    * `static_credentials` - Authenticate with an explicit key pair. Exactly one of `auto_credentials` or `static_credentials` is required.
       * `access_key_id` - (Required) Access key ID.
       * `secret_access_key` - (Optional) Secret access key. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.
 

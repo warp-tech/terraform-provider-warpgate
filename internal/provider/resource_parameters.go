@@ -193,9 +193,12 @@ func resourceParameters() *schema.Resource {
 				Description:  "What to do when a target's SSH host key isn't in the known hosts list.",
 				ValidateFunc: validation.StringInSlice([]string{"Prompt", "AutoAccept", "AutoReject", "Ignore"}, false),
 			},
+			// 0 is rejected: the API distinguishes unset (reauthentication never
+			// required) from 0 (reauthentication required on every action), and
+			// the unset value reads back as 0, inviting the wrong meaning.
 			"web_auth_max_age_seconds": optionalIntParameter(
-				"How long a web login stays valid before reauthentication is required, in seconds.",
-				intAtLeastZero,
+				"How long a web login stays valid before reauthentication is required, in seconds. Unset means reauthentication is never required.",
+				validation.ToDiagFunc(validation.IntAtLeast(1)),
 			),
 			"web_approval_grace_period_seconds": optionalIntParameter(
 				"How long a remembered web approval stays valid, in seconds.",
@@ -211,11 +214,14 @@ func resourceParameters() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"disk": {
-							Type:          schema.TypeList,
-							Optional:      true,
-							MaxItems:      1,
-							ConflictsWith: []string{"recordings_storage.0.s3"},
-							Description:   "Local filesystem storage",
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							ExactlyOneOf: []string{
+								"recordings_storage.0.disk",
+								"recordings_storage.0.s3",
+							},
+							Description: "Local filesystem storage",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"path": {
@@ -227,11 +233,14 @@ func resourceParameters() *schema.Resource {
 							},
 						},
 						"s3": {
-							Type:          schema.TypeList,
-							Optional:      true,
-							MaxItems:      1,
-							ConflictsWith: []string{"recordings_storage.0.disk"},
-							Description:   "S3 or S3-compatible object storage",
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							ExactlyOneOf: []string{
+								"recordings_storage.0.disk",
+								"recordings_storage.0.s3",
+							},
+							Description: "S3 or S3-compatible object storage",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"bucket": {
@@ -260,21 +269,27 @@ func resourceParameters() *schema.Resource {
 										Description: "Key prefix prepended to every object path",
 									},
 									"auto_credentials": {
-										Type:          schema.TypeList,
-										Optional:      true,
-										MaxItems:      1,
-										ConflictsWith: []string{"recordings_storage.0.s3.0.static_credentials"},
-										Description:   "Authenticate with the ambient AWS credential chain",
+										Type:     schema.TypeList,
+										Optional: true,
+										MaxItems: 1,
+										ExactlyOneOf: []string{
+											"recordings_storage.0.s3.0.auto_credentials",
+											"recordings_storage.0.s3.0.static_credentials",
+										},
+										Description: "Authenticate with the ambient AWS credential chain",
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{},
 										},
 									},
 									"static_credentials": {
-										Type:          schema.TypeList,
-										Optional:      true,
-										MaxItems:      1,
-										ConflictsWith: []string{"recordings_storage.0.s3.0.auto_credentials"},
-										Description:   "Authenticate with an explicit key pair",
+										Type:     schema.TypeList,
+										Optional: true,
+										MaxItems: 1,
+										ExactlyOneOf: []string{
+											"recordings_storage.0.s3.0.auto_credentials",
+											"recordings_storage.0.s3.0.static_credentials",
+										},
+										Description: "Authenticate with an explicit key pair",
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"access_key_id": {
