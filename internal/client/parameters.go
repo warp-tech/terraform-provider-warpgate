@@ -3,7 +3,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 )
 
@@ -152,12 +151,11 @@ func (c *Client) UpdateParameters(ctx context.Context, req *ParametersUpdateRequ
 		return nil, err
 	}
 
-	// PUT /parameters returns 201 with no body, so we need to discard the response
+	// PUT /parameters returns 201 with no body, so discard the response
 	// and fetch the current state instead
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("failed to update parameters: HTTP %d", resp.StatusCode)
+	if err := handleResponse(resp, nil); err != nil {
+		return nil, err
 	}
 
-	// Fetch the updated parameters
 	return c.GetParameters(ctx)
 }
