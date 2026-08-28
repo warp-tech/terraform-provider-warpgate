@@ -139,3 +139,24 @@ func TestSetTargetOptionsWithSSHKeyIDAndJumpHost(t *testing.T) {
 		t.Fatalf("expected key_id aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee, got %v", got)
 	}
 }
+
+func TestBuildSSHTargetOptionsWithEmptyPublicKeyAuthBlock(t *testing.T) {
+	opts, err := buildSSHTargetOptions(map[string]any{
+		"host":                 "ssh.example.com",
+		"port":                 22,
+		"username":             "root",
+		"allow_insecure_algos": false,
+		"public_key_auth":      []any{nil},
+	})
+	if err != nil {
+		t.Fatalf("buildSSHTargetOptions returned error: %v", err)
+	}
+
+	pkAuth, ok := opts.Auth.(*client.SSHTargetPublicKeyAuth)
+	if !ok {
+		t.Fatalf("expected SSHTargetPublicKeyAuth, got %T", opts.Auth)
+	}
+	if pkAuth.KeyID != "" {
+		t.Fatalf("expected empty key ID, got %q", pkAuth.KeyID)
+	}
+}

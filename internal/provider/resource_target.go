@@ -641,10 +641,11 @@ func buildSSHTargetOptions(opts map[string]any) (*client.TargetSSHOptions, error
 			Password: password,
 		}
 	} else if v, ok := opts["public_key_auth"]; ok && len(v.([]any)) > 0 {
-		pkAuth := v.([]any)[0].(map[string]any)
 		var keyID string
-		if k, ok := pkAuth["key_id"]; ok && k != nil {
-			keyID = k.(string)
+		if pkAuth, ok := v.([]any)[0].(map[string]any); ok {
+			if k, ok := pkAuth["key_id"]; ok && k != nil {
+				keyID = k.(string)
+			}
 		}
 		auth = &client.SSHTargetPublicKeyAuth{
 			Kind:  "PublicKey",
