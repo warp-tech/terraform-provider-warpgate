@@ -371,6 +371,52 @@ func dataSourceTarget() *schema.Resource {
 					},
 				},
 			},
+			// RDP Target Configuration
+			"rdp_options": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "RDP target options",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The RDP server hostname or IP address",
+						},
+						"port": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Description: "The RDP server port",
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The RDP username",
+						},
+						"domain": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The RDP authentication domain",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Sensitive:   true,
+							Description: "The password for RDP authentication",
+						},
+						"verify_tls": {
+							Type:        schema.TypeBool,
+							Computed:    true,
+							Description: "Verify the RDP server's TLS certificate",
+						},
+						"tls_security": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "TLS security profile for the RDP connection",
+						},
+					},
+				},
+			},
 		},
 	}
 }

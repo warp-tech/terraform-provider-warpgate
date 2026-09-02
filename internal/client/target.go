@@ -122,6 +122,27 @@ type KubernetesTargetCertificateAuth struct {
 	PrivateKey  string `json:"private_key"`
 }
 
+// TargetRDPOptions represents options for RDP targets
+type TargetRDPOptions struct {
+	Kind        string        `json:"kind"`
+	Host        string        `json:"host"`
+	Port        int           `json:"port"`
+	Username    string        `json:"username"`
+	Domain      string        `json:"domain,omitempty"`
+	Auth        RDPTargetAuth `json:"auth"`
+	VerifyTLS   bool          `json:"verify_tls"`
+	TLSSecurity string        `json:"tls_security,omitempty"`
+}
+
+// RDPTargetAuth is a wrapper for the different RDP authentication methods
+type RDPTargetAuth any
+
+// RDPTargetPasswordAuth represents password authentication for RDP targets
+type RDPTargetPasswordAuth struct {
+	Kind     string `json:"kind"`
+	Password string `json:"password"`
+}
+
 // TargetKubernetesOptions represents options for Kubernetes targets
 type TargetKubernetesOptions struct {
 	Kind       string               `json:"kind"`

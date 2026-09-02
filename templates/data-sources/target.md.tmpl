@@ -45,6 +45,7 @@ locals {
   is_mysql      = length(data.warpgate_target.server.mysql_options) > 0
   is_postgres   = length(data.warpgate_target.server.postgres_options) > 0
   is_kubernetes = length(data.warpgate_target.server.kubernetes_options) > 0
+  is_rdp        = length(data.warpgate_target.server.rdp_options) > 0
 
   # Safely access target details
   host = local.is_ssh ? data.warpgate_target.server.ssh_options[0].host :
@@ -52,6 +53,7 @@ locals {
          local.is_mysql ? data.warpgate_target.server.mysql_options[0].host :
          local.is_postgres ? data.warpgate_target.server.postgres_options[0].host :
          local.is_kubernetes ? data.warpgate_target.server.kubernetes_options[0].cluster_url :
+         local.is_rdp ? data.warpgate_target.server.rdp_options[0].host :
          "unknown"
 }
 
@@ -61,6 +63,7 @@ output "target_type" {
           local.is_mysql ? "MySQL" :
           local.is_postgres ? "PostgreSQL" :
           local.is_kubernetes ? "Kubernetes" :
+          local.is_rdp ? "RDP" :
           "unknown"
 }
 
@@ -137,5 +140,14 @@ Based on the target type, one of the following option blocks will be populated:
   - `certificate_auth` - Certificate authentication configuration (if applicable).
     - `certificate` - The client certificate PEM.
     - `private_key` - The client private key PEM.
+
+- `rdp_options` - Configuration for RDP targets.
+  - `host` - The RDP server hostname or IP address.
+  - `port` - The RDP server port.
+  - `username` - The RDP username.
+  - `domain` - The Windows domain used for authentication.
+  - `password` - The password for RDP authentication.
+  - `verify_tls` - Whether the RDP server's TLS certificate is verified.
+  - `tls_security` - The TLS security profile (Tls12, Tls12WithLegacyCiphers, Tls10Unsafe).
 
 {{ .SchemaMarkdown | trimspace }}
