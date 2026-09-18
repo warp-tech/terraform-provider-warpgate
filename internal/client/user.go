@@ -28,10 +28,13 @@ const (
 
 // UserRequireCredentialsPolicy defines the credential policy for a user
 type UserRequireCredentialsPolicy struct {
-	HTTP     []CredentialKind `json:"http,omitempty"`
-	SSH      []CredentialKind `json:"ssh,omitempty"`
-	MySQL    []CredentialKind `json:"mysql,omitempty"`
-	Postgres []CredentialKind `json:"postgres,omitempty"`
+	HTTP       []CredentialKind `json:"http,omitempty"`
+	SSH        []CredentialKind `json:"ssh,omitempty"`
+	MySQL      []CredentialKind `json:"mysql,omitempty"`
+	Postgres   []CredentialKind `json:"postgres,omitempty"`
+	Kubernetes []CredentialKind `json:"kubernetes,omitempty"`
+	Vnc        []CredentialKind `json:"vnc,omitempty"`
+	Rdp        []CredentialKind `json:"rdp,omitempty"`
 }
 
 // User represents a Warpgate user

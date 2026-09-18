@@ -68,7 +68,3 @@ func setOptionalInt(d *schema.ResourceData, key string, value *int) error {
 func setOptionalInt64(d *schema.ResourceData, key string, value *int64) error {
 	return d.Set(key, value)
 }
-
-func setOptionalBool(d *schema.ResourceData, key string, value *bool) error {
-	return d.Set(key, value)
-}

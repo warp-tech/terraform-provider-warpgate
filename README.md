@@ -10,6 +10,16 @@ This Terraform provider allows you to manage [Warpgate](https://github.com/warp-
 - [Go](https://golang.org/doc/install) >= 1.18 (to build the provider)
 - [Warpgate](https://github.com/warp-tech/warpgate) >= 0.13.2
 
+## Warpgate Compatibility
+
+| Provider version | Warpgate version |
+|---|---|
+| 1.2.0 | 0.29 |
+| <=1.11.0 | 0.28 |
+
+Versions come from the admin API schema published with each Warpgate release tag. 0.29.0 is in
+pre-release; those features ship in 0.29.0-beta.1 and later.
+
 ## Building the Provider
 
 1. Clone the repository:
@@ -66,18 +76,23 @@ export WARPGATE_TOKEN="your-api-token"
 
 - `warpgate_role` - Manage Warpgate roles
 - `warpgate_user` - Manage Warpgate users
-- `warpgate_target` - Manage Warpgate targets (SSH, HTTP, MySQL, PostgreSQL)
+- `warpgate_target` - Manage Warpgate targets (SSH, HTTP, MySQL, PostgreSQL, Kubernetes, RDP, VNC)
+- `warpgate_target_group` - Manage target groups
 - `warpgate_user_role` - Manage role assignments to users
 - `warpgate_target_role` - Manage role assignments to targets
 - `warpgate_password_credential` - Manage password credentials for users
 - `warpgate_public_key_credential` - Manage SSH public key credentials for users
+- `warpgate_user_sso_credential` - Manage SSO credentials for users
 - `warpgate_ticket` - Manage access tickets
+- `warpgate_ssh_key` - Manage Warpgate's stored SSH client keys
+- `warpgate_parameters` - Manage instance-wide parameters
 
 #### Data Sources
 
 - `warpgate_role` - Retrieve information about a Warpgate role
 - `warpgate_user` - Retrieve information about a Warpgate user
 - `warpgate_target` - Retrieve information about a Warpgate target
+- `warpgate_ssh_key` - Retrieve one of Warpgate's stored SSH client keys
 - `warpgate_ssh_own_keys` - Retrieve the Warpgate server's SSH host keys
 
 ## Example Usage

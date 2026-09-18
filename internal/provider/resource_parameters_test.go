@@ -310,3 +310,69 @@ func TestValidateAbsentRecordingsStorage(t *testing.T) {
 		t.Fatalf("expected a config without recordings_storage to validate, got %+v", diags)
 	}
 }
+
+func TestMfaEnforcementValidation(t *testing.T) {
+	for _, mode := range []string{"Off", "Enroll", "Require"} {
+		diags := resourceParameters().Validate(terraform.NewResourceConfigRaw(map[string]any{
+			"allow_own_credential_management": true,
+			"mfa_enforcement":                 mode,
+		}))
+		if diags.HasError() {
+			t.Fatalf("expected %q to validate, got %+v", mode, diags)
+		}
+	}
+
+	diags := resourceParameters().Validate(terraform.NewResourceConfigRaw(map[string]any{
+		"allow_own_credential_management": true,
+		"mfa_enforcement":                 "Always",
+	}))
+	if !diags.HasError() {
+		t.Fatal("expected an error for an invalid mfa_enforcement value")
+	}
+}
+
+func TestExpandDefaultCredentialPolicyUnsetIsNil(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceParameters().Schema, map[string]any{})
+
+	// A partial update must not clear the policy Warpgate already has.
+	if policy := expandDefaultCredentialPolicy(d); policy != nil {
+		t.Fatalf("expected nil for an unconfigured policy, got %+v", policy)
+	}
+}
+
+// One list per protocol Warpgate knows: a protocol missing from the mapping
+// would silently vanish on the way to or from the API.
+func TestCredentialPolicyRoundTripCoversEveryProtocol(t *testing.T) {
+	raw := map[string]any{}
+	for _, protocol := range credentialPolicyProtocols {
+		raw[protocol] = []any{"Password", "Totp"}
+	}
+
+	policy := expandCredentialPolicy([]any{raw})
+	for protocol, list := range credentialPolicyLists(policy) {
+		if len(*list) != 2 {
+			t.Fatalf("expected %s to carry two kinds, got %v", protocol, *list)
+		}
+	}
+
+	back := flattenCredentialPolicy(policy)[0].(map[string]any)
+	for _, protocol := range credentialPolicyProtocols {
+		if got := back[protocol].([]any); len(got) != 2 || got[0] != "Password" {
+			t.Fatalf("expected %s to round-trip, got %v", protocol, got)
+		}
+	}
+
+	if err := validateCredentialPolicy("default_credential_policy", []any{map[string]any{"telnet": []any{"Password"}}}); err == nil {
+		t.Fatal("expected an unknown protocol key to be rejected")
+	}
+}
+
+// The block is Optional+Computed, so before Warpgate has reported a policy back
+// the plan carries a one-element list with nothing in it. Warpgate versions that
+// do not seed a new user's policy leave it that way, and rejecting it there made
+// every plan fail with "credential_policy must be a map".
+func TestValidateCredentialPolicyAcceptsAnUnreadComputedBlock(t *testing.T) {
+	if err := validateCredentialPolicy("credential_policy", []any{nil}); err != nil {
+		t.Fatalf("expected an unread computed block to pass validation, got %v", err)
+	}
+}

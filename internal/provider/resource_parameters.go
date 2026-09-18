@@ -56,6 +56,17 @@ func resourceParameters() *schema.Resource {
 				Description:  "How the password login form is presented on the gateway login page.",
 				ValidateFunc: validation.StringInSlice([]string{"Enabled", "Minimized", "Disabled"}, false),
 			},
+			"mfa_enforcement": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Second-factor policy for password logins: Off, Enroll (users are prompted to set one up), or Require.",
+				ValidateFunc: validation.StringInSlice([]string{"Off", "Enroll", "Require"}, false),
+			},
+			"mfa_policy_exempt_sso_users": optionalComputedBoolParameter(
+				"Exempt users who log in through SSO from mfa_enforcement.",
+			),
+			"default_credential_policy": credentialPolicySchema("Credential policy applied to users that have none of their own."),
 			"ticket_self_service_enabled": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -132,6 +143,9 @@ func resourceParameters() *schema.Resource {
 				intAtLeastZero,
 			),
 			"record_scp": optionalComputedBoolParameter("Record SCP sessions."),
+			"record_desktop_keyboard_input": optionalComputedBoolParameter(
+				"Record keyboard input in RDP and VNC session recordings.",
+			),
 			"login_protection_enabled": optionalComputedBoolParameter(
 				"Enable login protection.",
 			),
@@ -210,6 +224,16 @@ func resourceParameters() *schema.Resource {
 			"web_approval_grace_period_seconds": optionalIntParameter(
 				"How long a remembered web approval stays valid, in seconds.",
 				intAtLeastZero,
+			),
+			// Same unset-vs-0 distinction as web_auth_max_age_seconds: the API
+			// rejects 0 and reads an unset value back as 0.
+			"admin_approval_timeout_seconds": optionalIntParameter(
+				"How long a session held for administrator approval waits before it is rejected, in seconds. Unset uses the login timeout.",
+				validation.ToDiagFunc(validation.IntAtLeast(1)),
+			),
+			"admin_approval_grace_period_seconds": optionalIntParameter(
+				"How long a remembered administrator approval stays valid, in seconds. Unset means approvals are not remembered.",
+				validation.ToDiagFunc(validation.IntAtLeast(1)),
 			),
 			"recordings_enable": optionalComputedBoolParameter("Record sessions."),
 			"recordings_storage": {
@@ -398,6 +422,9 @@ func resourceParametersRead(ctx context.Context, d *schema.ResourceData, meta an
 		{"ssh_client_auth_password", params.SSHClientAuthPassword},
 		{"ssh_client_auth_keyboard_interactive", params.SSHClientAuthKeyboardInteractive},
 		{"password_login_mode", params.PasswordLoginMode},
+		{"mfa_enforcement", params.MfaEnforcement},
+		{"mfa_policy_exempt_sso_users", params.MfaPolicyExemptSsoUsers},
+		{"default_credential_policy", flattenCredentialPolicy(&params.DefaultCredentialPolicy)},
 		{"ticket_self_service_enabled", params.TicketSelfServiceEnabled},
 		{"ticket_auto_approve_existing_access", params.TicketAutoApproveExistingAccess},
 		{"ticket_max_duration_seconds", int(params.TicketMaxDurationSeconds)},
@@ -410,6 +437,7 @@ func resourceParametersRead(ctx context.Context, d *schema.ResourceData, meta an
 		{"password_policy", flattenPasswordPolicy(params.PasswordPolicy)},
 		{"max_api_token_duration_seconds", int(params.MaxAPITokenDurationSeconds)},
 		{"record_scp", params.RecordSCP},
+		{"record_desktop_keyboard_input", params.RecordDesktopKeyboardInput},
 		{"login_protection_enabled", params.LoginProtectionEnabled},
 		{"login_protection_retention_seconds", params.LoginProtectionRetentionSeconds},
 		{"lp_ip_max_attempts", params.LPIPMaxAttempts},
@@ -430,6 +458,8 @@ func resourceParametersRead(ctx context.Context, d *schema.ResourceData, meta an
 		{"ssh_host_key_verification", params.SSHHostKeyVerification},
 		{"web_auth_max_age_seconds", int(params.WebAuthMaxAgeSeconds)},
 		{"web_approval_grace_period_seconds", int(params.WebApprovalGracePeriodSeconds)},
+		{"admin_approval_timeout_seconds", int(params.AdminApprovalTimeoutSeconds)},
+		{"admin_approval_grace_period_seconds", int(params.AdminApprovalGracePeriodSeconds)},
 		{"recordings_enable", params.RecordingsEnable},
 		{"recordings_storage", flattenRecordingsStorage(d, params.RecordingsStorage)},
 	} {
@@ -463,6 +493,9 @@ func expandParametersUpdateRequest(d *schema.ResourceData) *client.ParametersUpd
 		SSHClientAuthPublickey:           optionalBoolPointer(d, "ssh_client_auth_publickey"),
 		SSHClientAuthPassword:            optionalBoolPointer(d, "ssh_client_auth_password"),
 		SSHClientAuthKeyboardInteractive: optionalBoolPointer(d, "ssh_client_auth_keyboard_interactive"),
+		MfaEnforcement:                   optionalStringPointer(d, "mfa_enforcement"),
+		MfaPolicyExemptSsoUsers:          optionalBoolPointer(d, "mfa_policy_exempt_sso_users"),
+		DefaultCredentialPolicy:          expandDefaultCredentialPolicy(d),
 		TicketSelfServiceEnabled:         optionalBoolPointer(d, "ticket_self_service_enabled"),
 		TicketAutoApproveExistingAccess:  optionalBoolPointer(d, "ticket_auto_approve_existing_access"),
 		TicketMaxDurationSeconds:         optionalInt64Pointer(d, "ticket_max_duration_seconds"),
@@ -475,6 +508,7 @@ func expandParametersUpdateRequest(d *schema.ResourceData) *client.ParametersUpd
 		PasswordPolicy:                   expandPasswordPolicy(d),
 		MaxAPITokenDurationSeconds:       optionalInt64Pointer(d, "max_api_token_duration_seconds"),
 		RecordSCP:                        optionalBoolPointer(d, "record_scp"),
+		RecordDesktopKeyboardInput:       optionalBoolPointer(d, "record_desktop_keyboard_input"),
 		LoginProtectionEnabled:           optionalBoolPointer(d, "login_protection_enabled"),
 		LoginProtectionRetentionSeconds:  optionalIntPointer(d, "login_protection_retention_seconds"),
 		LPIPMaxAttempts:                  optionalIntPointer(d, "lp_ip_max_attempts"),
@@ -495,6 +529,8 @@ func expandParametersUpdateRequest(d *schema.ResourceData) *client.ParametersUpd
 		SSHHostKeyVerification:           optionalStringPointer(d, "ssh_host_key_verification"),
 		WebAuthMaxAgeSeconds:             optionalInt64Pointer(d, "web_auth_max_age_seconds"),
 		WebApprovalGracePeriodSeconds:    optionalInt64Pointer(d, "web_approval_grace_period_seconds"),
+		AdminApprovalTimeoutSeconds:      optionalInt64Pointer(d, "admin_approval_timeout_seconds"),
+		AdminApprovalGracePeriodSeconds:  optionalInt64Pointer(d, "admin_approval_grace_period_seconds"),
 		RecordingsEnable:                 optionalBoolPointer(d, "recordings_enable"),
 		RecordingsStorage:                expandRecordingsStorage(d),
 	}
@@ -504,6 +540,16 @@ func expandParametersUpdateRequest(d *schema.ResourceData) *client.ParametersUpd
 	}
 
 	return req
+}
+
+// expandDefaultCredentialPolicy sends the policy only when it is configured:
+// the update is partial, and an unconfigured block must not wipe the stored one.
+func expandDefaultCredentialPolicy(d *schema.ResourceData) *client.UserRequireCredentialsPolicy {
+	if !configuredValueExists(d, "default_credential_policy") {
+		return nil
+	}
+
+	return expandCredentialPolicy(d.Get("default_credential_policy").([]any))
 }
 
 func flattenRecordingsStorage(d *schema.ResourceData, cfg client.RecordingsStorageConfig) []any {

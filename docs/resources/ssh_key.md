@@ -79,7 +79,7 @@ tofu import warpgate_ssh_key.example 12345678-1234-1234-1234-123456789012
 ### Optional
 
 - `is_default` (Boolean) Whether this SSH key is marked as default for host authentication
-- `kind` (String) The key type for key generation (e.g. Ed25519, Rsa4096). Defaults to Ed25519 when generating.
+- `kind` (String) The key type for key generation: Ed25519 or Rsa. Defaults to Ed25519 when generating.
 - `secret_key` (String, Sensitive) Private key in OpenSSH or PKCS#8 PEM format for importing an existing key. If not provided, a new key pair will be generated.
 
 ### Read-Only

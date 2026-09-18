@@ -60,6 +60,11 @@ func dataSourceTarget() *schema.Resource {
 				Computed:    true,
 				Description: "Whether ticket requests require manual approval",
 			},
+			"require_approval": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Whether new sessions are held until an administrator approves them",
+			},
 			"ticket_max_uses": {
 				Type:        schema.TypeInt,
 				Computed:    true,
@@ -220,6 +225,14 @@ func dataSourceTarget() *schema.Resource {
 							Sensitive:   true,
 							Description: "The MySQL password",
 						},
+						"iam_role_auth": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "AWS IAM authentication instead of a password",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{},
+							},
+						},
 						"tls": {
 							Type:        schema.TypeList,
 							Computed:    true,
@@ -274,11 +287,24 @@ func dataSourceTarget() *schema.Resource {
 							Computed:    true,
 							Description: "The PostgreSQL protocol version requested by the target",
 						},
+						"idle_timeout": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Idle connection timeout as a duration string",
+						},
 						"password": {
 							Type:        schema.TypeString,
 							Computed:    true,
 							Sensitive:   true,
 							Description: "The PostgreSQL password",
+						},
+						"iam_role_auth": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "AWS IAM authentication instead of a password",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{},
+							},
 						},
 						"tls": {
 							Type:        schema.TypeList,
@@ -368,6 +394,14 @@ func dataSourceTarget() *schema.Resource {
 								},
 							},
 						},
+						"iam_role_auth": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "AWS IAM authentication (EKS) instead of a token or certificate",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{},
+							},
+						},
 					},
 				},
 			},
@@ -414,6 +448,42 @@ func dataSourceTarget() *schema.Resource {
 							Computed:    true,
 							Description: "TLS security profile for the RDP connection",
 						},
+						"compression": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Codec advertised to the RDP server",
+						},
+						"interactive_logon": {
+							Type:        schema.TypeBool,
+							Computed:    true,
+							Description: "Whether the target's own sign-in screen is shown",
+						},
+					},
+				},
+			},
+			// VNC Target Configuration
+			"vnc_options": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "VNC target options",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The VNC server hostname or IP address",
+						},
+						"port": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Description: "The VNC server port",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Sensitive:   true,
+							Description: "The VNC password, empty for a server without authentication",
+						},
 					},
 				},
 			},
@@ -455,7 +525,8 @@ func dataSourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any)
 		}
 	} else {
 		idStr := id.(string)
-		target, err := c.GetTarget(ctx, idStr)
+		var err error
+		target, err = c.GetTarget(ctx, idStr)
 		if err != nil {
 			return diag.FromErr(fmt.Errorf("failed to read target: %w", err))
 		}
@@ -490,12 +561,16 @@ func dataSourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any)
 		return diag.FromErr(fmt.Errorf("failed to set ticket_max_duration_seconds: %w", err))
 	}
 
-	if err := setOptionalBool(d, "ticket_requests_disabled", target.TicketRequestsDisabled); err != nil {
+	if err := d.Set("ticket_requests_disabled", target.TicketRequestsDisabled); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set ticket_requests_disabled: %w", err))
 	}
 
-	if err := setOptionalBool(d, "ticket_require_approval", target.TicketRequireApproval); err != nil {
+	if err := d.Set("ticket_require_approval", target.TicketRequireApproval); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set ticket_require_approval: %w", err))
+	}
+
+	if err := d.Set("require_approval", target.RequireApproval); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set require_approval: %w", err))
 	}
 
 	if err := setOptionalInt(d, "ticket_max_uses", target.TicketMaxUses); err != nil {

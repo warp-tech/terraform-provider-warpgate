@@ -19,6 +19,8 @@ resource "warpgate_parameters" "global_settings" {
   ssh_client_auth_password            = true
   ssh_client_auth_keyboard_interactive = false
   password_login_mode                 = "Enabled"
+  mfa_enforcement                     = "Enroll"
+  mfa_policy_exempt_sso_users         = true
   ticket_self_service_enabled         = true
   ticket_auto_approve_existing_access = true
   ticket_max_duration_seconds         = 86400
@@ -39,6 +41,7 @@ resource "warpgate_parameters" "global_settings" {
 
   max_api_token_duration_seconds      = 2592000
   record_scp                          = true
+  record_desktop_keyboard_input       = true
 
   login_protection_enabled                 = true
   login_protection_retention_seconds       = 2592000
@@ -61,6 +64,13 @@ resource "warpgate_parameters" "global_settings" {
   ssh_host_key_verification                = "AutoAccept"
   web_auth_max_age_seconds                 = 28800
   web_approval_grace_period_seconds        = 3600
+  admin_approval_timeout_seconds           = 600
+  admin_approval_grace_period_seconds      = 3600
+
+  default_credential_policy {
+    ssh = ["Password", "Totp"]
+    rdp = ["Password"]
+  }
 
   recordings_enable                        = true
   recordings_storage {
@@ -108,6 +118,9 @@ The following arguments are supported:
 * `ssh_client_auth_password` - (Optional) Enable SSH password authentication for clients.
 * `ssh_client_auth_keyboard_interactive` - (Optional) Enable SSH keyboard interactive authentication for clients.
 * `password_login_mode` - (Optional) How the password login form is presented on the gateway login page. Allowed values: `Enabled`, `Minimized`, `Disabled`.
+* `mfa_enforcement` - (Optional) Second-factor policy for password logins. Allowed values: `Off`, `Enroll` (users are prompted to set one up), `Require`.
+* `mfa_policy_exempt_sso_users` - (Optional) Exempt users who log in through SSO from `mfa_enforcement`.
+* `default_credential_policy` - (Optional) Credential policy applied to users that have none of their own. One list of credential kinds per protocol: `http`, `ssh`, `mysql`, `postgres`, `kubernetes`, `vnc`, `rdp`.
 * `ticket_self_service_enabled` - (Optional) Enable ticket self-service.
 * `ticket_auto_approve_existing_access` - (Optional) Automatically approve ticket requests when the requester already has access.
 * `ticket_max_duration_seconds` - (Optional) Maximum ticket duration in seconds.
@@ -120,6 +133,7 @@ The following arguments are supported:
 * `password_policy` - (Optional) Password policy rules.
 * `max_api_token_duration_seconds` - (Optional) Maximum API token duration in seconds.
 * `record_scp` - (Optional) Record SCP sessions.
+* `record_desktop_keyboard_input` - (Optional) Record keyboard input in RDP and VNC session recordings.
 * `login_protection_enabled` - (Optional) Enable login protection.
 * `login_protection_retention_seconds` - (Optional) How long login protection records are retained, in seconds.
 * `lp_ip_max_attempts` - (Optional) Maximum failed login attempts per IP address.
@@ -140,6 +154,8 @@ The following arguments are supported:
 * `ssh_host_key_verification` - (Optional) What to do when a target's SSH host key isn't in the known hosts list. Allowed values: `Prompt`, `AutoAccept`, `AutoReject`, `Ignore`.
 * `web_auth_max_age_seconds` - (Optional) How long a web login stays valid before reauthentication is required, in seconds. Must be at least 1; unset means reauthentication is never required.
 * `web_approval_grace_period_seconds` - (Optional) How long a remembered web approval stays valid, in seconds.
+* `admin_approval_timeout_seconds` - (Optional) How long a session held for administrator approval waits before it is rejected, in seconds. Must be at least 1; unset uses the login timeout.
+* `admin_approval_grace_period_seconds` - (Optional) How long a remembered administrator approval stays valid, in seconds. Must be at least 1; unset means approvals are not remembered.
 * `recordings_enable` - (Optional) Record sessions.
 * `recordings_storage` - (Optional) Where session recordings are stored. Exactly one of the `disk` or `s3` blocks.
   * `disk` - Local filesystem storage.
@@ -158,6 +174,8 @@ The following arguments are supported:
 ~> **Note** `recordings_enable` and `recordings_storage` require Warpgate 0.27 or newer, where recording storage moved out of `warpgate.yaml` into the database.
 
 ~> **Note** `open_targets_in_new_tab` requires Warpgate 0.28 or newer.
+
+~> **Note** `mfa_enforcement`, `mfa_policy_exempt_sso_users`, `default_credential_policy`, `record_desktop_keyboard_input`, `admin_approval_timeout_seconds` and `admin_approval_grace_period_seconds` require Warpgate 0.29.0 or newer.
 
 ## Attribute Reference
 
@@ -197,9 +215,12 @@ tofu import warpgate_parameters.global_settings parameters
 
 ### Optional
 
+- `admin_approval_grace_period_seconds` (Number) How long a remembered administrator approval stays valid, in seconds. Unset means approvals are not remembered.
+- `admin_approval_timeout_seconds` (Number) How long a session held for administrator approval waits before it is rejected, in seconds. Unset uses the login timeout.
 - `analytics_consent` (String) Whether the instance reports anonymous usage analytics.
 - `analytics_normal` (Boolean) Enable the normal analytics payload level.
 - `banner` (String) Banner shown to clients before authentication.
+- `default_credential_policy` (Block List, Max: 1) Credential policy applied to users that have none of their own. (see [below for nested schema](#nestedblock--default_credential_policy))
 - `login_protection_enabled` (Boolean) Enable login protection.
 - `login_protection_retention_seconds` (Number) How long login protection records are retained, in seconds.
 - `lp_ip_base_block_duration_seconds` (Number) Base IP block duration in seconds.
@@ -214,10 +235,13 @@ tofu import warpgate_parameters.global_settings parameters
 - `lp_user_max_attempts` (Number) Maximum failed login attempts per user.
 - `lp_user_time_window_seconds` (Number) Time window for failed login attempts per user, in seconds.
 - `max_api_token_duration_seconds` (Number) Maximum API token duration in seconds.
+- `mfa_enforcement` (String) Second-factor policy for password logins: Off, Enroll (users are prompted to set one up), or Require.
+- `mfa_policy_exempt_sso_users` (Boolean) Exempt users who log in through SSO from mfa_enforcement.
 - `open_targets_in_new_tab` (String) How the portal decides whether targets open in a new browser tab.
 - `password_login_mode` (String) How the password login form is presented on the gateway login page.
 - `password_policy` (Block List, Max: 1) Password policy rules. (see [below for nested schema](#nestedblock--password_policy))
 - `rate_limit_bytes_per_second` (Number) Global bandwidth limit
+- `record_desktop_keyboard_input` (Boolean) Record keyboard input in RDP and VNC session recordings.
 - `record_scp` (Boolean) Record SCP sessions.
 - `recordings_enable` (Boolean) Record sessions.
 - `recordings_storage` (Block List, Max: 1) Where session recordings are stored. (see [below for nested schema](#nestedblock--recordings_storage))
@@ -240,6 +264,20 @@ tofu import warpgate_parameters.global_settings parameters
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+<a id="nestedblock--default_credential_policy"></a>
+### Nested Schema for `default_credential_policy`
+
+Optional:
+
+- `http` (List of String)
+- `kubernetes` (List of String)
+- `mysql` (List of String)
+- `postgres` (List of String)
+- `rdp` (List of String)
+- `ssh` (List of String)
+- `vnc` (List of String)
+
 
 <a id="nestedblock--password_policy"></a>
 ### Nested Schema for `password_policy`

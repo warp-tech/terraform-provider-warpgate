@@ -13,7 +13,7 @@ type Ticket struct {
 	Username    string `json:"username,omitempty"`
 	Description string `json:"description,omitempty"`
 	Target      string `json:"target,omitempty"`
-	UsesLeft    string `json:"uses_left,omitempty"`
+	UsesLeft    *int   `json:"uses_left,omitempty"`
 	Expiry      string `json:"expiry,omitempty"`
 	Created     string `json:"created,omitempty"`
 }

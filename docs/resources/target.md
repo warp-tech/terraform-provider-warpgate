@@ -75,6 +75,9 @@ resource "warpgate_target" "mysql_db" {
       mode   = "Required"
       verify = true
     }
+
+    # On AWS RDS, authenticate with the instance's IAM role instead:
+    # iam_role_auth {}
   }
 }
 ```
@@ -159,6 +162,45 @@ resource "warpgate_target" "windows_server" {
     domain       = "CORP"
     verify_tls   = false
     tls_security = "Tls12"
+
+    # Lossless compression when Warpgate and the server share a network;
+    # interactive_logon shows the Windows sign-in screen instead of logging on.
+    compression       = "remotefx"
+    interactive_logon = false
+  }
+}
+```
+
+### VNC Target
+
+```hcl
+resource "warpgate_target" "vnc_desktop" {
+  name = "vnc-desktop"
+
+  vnc_options {
+    host     = "10.0.0.11"
+    port     = 5900
+    password = "supersecret" # omit for a server without authentication
+  }
+}
+```
+
+### Target requiring administrator approval
+
+```hcl
+resource "warpgate_target" "prod_db" {
+  name             = "prod-db"
+  require_approval = true
+
+  postgres_options {
+    host     = "prod-db.internal"
+    port     = 5432
+    username = "admin"
+    password = var.db_password
+    tls {
+      mode   = "Required"
+      verify = true
+    }
   }
 }
 ```
@@ -175,6 +217,7 @@ The following arguments are supported:
 * `ticket_requests_disabled` - (Optional) Whether ticket requests are disabled for this target.
 * `ticket_require_approval` - (Optional) Whether ticket requests require manual approval.
 * `ticket_max_uses` - (Optional) Maximum number of uses allowed per ticket.
+* `require_approval` - (Optional) Hold every new session to this target until an administrator approves it. Default: `false`.
 
 One of the following option blocks must be specified:
 
@@ -202,7 +245,8 @@ One of the following option blocks must be specified:
   * `host` - (Required) The MySQL server hostname or IP address.
   * `port` - (Required) The MySQL server port.
   * `username` - (Required) The MySQL username.
-  * `password` - (Optional) The MySQL password.
+  * `password` - (Optional) The MySQL password. Conflicts with `iam_role_auth`.
+  * `iam_role_auth` - (Optional) Authenticate with the AWS IAM role Warpgate runs under (RDS IAM authentication) instead of a password. Conflicts with `password`.
   * `tls` - (Required) TLS configuration block.
     * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
     * `verify` - (Required) Verify TLS certificates.
@@ -212,11 +256,25 @@ One of the following option blocks must be specified:
   * `port` - (Required) The PostgreSQL server port.
   * `username` - (Required) The PostgreSQL username.
   * `default_database_name` - (Optional) The default PostgreSQL database name to connect to.
-  * `protocol_version` - (Optional) The PostgreSQL protocol version to request. Valid values: `3.0`, `3.2`.
-  * `password` - (Optional) The PostgreSQL password.
+  * `protocol_version` - (Optional) The PostgreSQL protocol version to request. Valid values: `3.0`, `3.2`. Default: `3.2`.
+  * `idle_timeout` - (Optional) Idle connection timeout as a duration string, e.g. `10m`.
+  * `password` - (Optional) The PostgreSQL password. Conflicts with `iam_role_auth`.
+  * `iam_role_auth` - (Optional) Authenticate with the AWS IAM role Warpgate runs under (RDS IAM authentication) instead of a password. Conflicts with `password`.
   * `tls` - (Required) TLS configuration block.
     * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
     * `verify` - (Required) Verify TLS certificates.
+
+* `kubernetes_options` - (Optional) Kubernetes target configuration block.
+  * `cluster_url` - (Required) The Kubernetes API server URL.
+  * `tls` - (Required) TLS configuration block.
+    * `mode` - (Required) TLS mode. Valid values: `Disabled`, `Preferred`, `Required`.
+    * `verify` - (Required) Verify TLS certificates.
+  * `token_auth` - (Optional) Bearer token authentication. Conflicts with `certificate_auth` and `iam_role_auth`.
+    * `token` - (Required) The bearer token.
+  * `certificate_auth` - (Optional) Client certificate authentication. Conflicts with `token_auth` and `iam_role_auth`.
+    * `certificate` - (Required) The client certificate PEM.
+    * `private_key` - (Required) The client private key PEM.
+  * `iam_role_auth` - (Optional) Authenticate with the AWS IAM role Warpgate runs under (EKS) instead of a token or certificate. Conflicts with `token_auth` and `certificate_auth`.
 
 * `rdp_options` - (Optional) RDP target configuration block.
   * `host` - (Required) The RDP server hostname or IP address.
@@ -226,6 +284,15 @@ One of the following option blocks must be specified:
   * `password` - (Required) The password for RDP authentication.
   * `verify_tls` - (Optional) Verify the RDP server's TLS certificate. RDP servers commonly use self-signed certificates, hence the default. Default: `false`.
   * `tls_security` - (Optional) TLS security profile. Valid values: `Tls12`, `Tls12WithLegacyCiphers`, `Tls10Unsafe`. Default: `Tls12`.
+  * `compression` - (Optional) Codec advertised to the RDP server. Valid values: `remotefx`, `lossless`. Default: `remotefx`.
+  * `interactive_logon` - (Optional) Show the target's own sign-in screen instead of logging on automatically. Default: `false`.
+
+* `vnc_options` - (Optional) VNC target configuration block.
+  * `host` - (Required) The VNC server hostname or IP address.
+  * `port` - (Optional) The VNC server port. Default: `5900`.
+  * `password` - (Optional) The VNC password. Omit for a server without authentication.
+
+~> **Note** `require_approval` requires Warpgate 0.29.0 or newer. Other blocks and attributes have their own minimum versions: see the compatibility table in the [README](https://github.com/warp-tech/terraform-provider-warpgate#warpgate-compatibility).
 
 ## Attribute Reference
 
@@ -272,11 +339,13 @@ tofu import warpgate_target.web_server 12345678-1234-1234-1234-123456789012
 - `postgres_options` (Block List, Max: 1) PostgreSQL target options (see [below for nested schema](#nestedblock--postgres_options))
 - `rate_limit_bytes_per_second` (Number) Bandwidth limit in bytes per second
 - `rdp_options` (Block List, Max: 1) RDP target options (see [below for nested schema](#nestedblock--rdp_options))
+- `require_approval` (Boolean) Hold new sessions to this target until an administrator approves them
 - `ssh_options` (Block List, Max: 1) SSH target options (see [below for nested schema](#nestedblock--ssh_options))
 - `ticket_max_duration_seconds` (Number) Maximum ticket duration in seconds for this target
 - `ticket_max_uses` (Number) Maximum number of uses allowed per ticket
 - `ticket_requests_disabled` (Boolean) Whether ticket requests are disabled for this target
 - `ticket_require_approval` (Boolean) Whether ticket requests require manual approval
+- `vnc_options` (Block List, Max: 1) VNC target options (see [below for nested schema](#nestedblock--vnc_options))
 
 ### Read-Only
 
@@ -317,6 +386,7 @@ Required:
 Optional:
 
 - `certificate_auth` (Block List, Max: 1) Certificate authentication for Kubernetes (see [below for nested schema](#nestedblock--kubernetes_options--certificate_auth))
+- `iam_role_auth` (Block List, Max: 1) AWS IAM authentication (EKS) instead of a token or certificate (see [below for nested schema](#nestedblock--kubernetes_options--iam_role_auth))
 - `token_auth` (Block List, Max: 1) Token authentication for Kubernetes (see [below for nested schema](#nestedblock--kubernetes_options--token_auth))
 
 <a id="nestedblock--kubernetes_options--tls"></a>
@@ -335,6 +405,10 @@ Required:
 
 - `certificate` (String) The client certificate PEM
 - `private_key` (String, Sensitive) The client private key PEM
+
+
+<a id="nestedblock--kubernetes_options--iam_role_auth"></a>
+### Nested Schema for `kubernetes_options.iam_role_auth`
 
 
 <a id="nestedblock--kubernetes_options--token_auth"></a>
@@ -358,6 +432,7 @@ Required:
 
 Optional:
 
+- `iam_role_auth` (Block List, Max: 1) AWS IAM authentication instead of a password (see [below for nested schema](#nestedblock--mysql_options--iam_role_auth))
 - `password` (String, Sensitive) The MySQL password
 
 <a id="nestedblock--mysql_options--tls"></a>
@@ -367,6 +442,10 @@ Required:
 
 - `mode` (String) TLS mode (Disabled, Preferred, Required)
 - `verify` (Boolean) Verify TLS certificates
+
+
+<a id="nestedblock--mysql_options--iam_role_auth"></a>
+### Nested Schema for `mysql_options.iam_role_auth`
 
 
 
@@ -383,6 +462,8 @@ Required:
 Optional:
 
 - `default_database_name` (String) The default PostgreSQL database name to connect to
+- `iam_role_auth` (Block List, Max: 1) AWS IAM authentication instead of a password (see [below for nested schema](#nestedblock--postgres_options--iam_role_auth))
+- `idle_timeout` (String) Idle connection timeout as a duration string, e.g. 10m
 - `password` (String, Sensitive) The PostgreSQL password
 - `protocol_version` (String) The PostgreSQL protocol version to request. Valid values: 3.0, 3.2
 
@@ -393,6 +474,10 @@ Required:
 
 - `mode` (String) TLS mode (Disabled, Preferred, Required)
 - `verify` (Boolean) Verify TLS certificates
+
+
+<a id="nestedblock--postgres_options--iam_role_auth"></a>
+### Nested Schema for `postgres_options.iam_role_auth`
 
 
 
@@ -407,7 +492,9 @@ Required:
 
 Optional:
 
+- `compression` (String) Codec advertised to the RDP server: remotefx, or lossless when Warpgate and the target share a network
 - `domain` (String) The RDP authentication domain (Windows domain)
+- `interactive_logon` (Boolean) Show the target's own sign-in screen instead of logging on automatically
 - `port` (Number) The RDP server port
 - `tls_security` (String) TLS security profile for the RDP connection: Tls12, Tls12WithLegacyCiphers, Tls10Unsafe
 - `verify_tls` (Boolean) Verify the RDP server's TLS certificate
@@ -448,3 +535,17 @@ Required:
 Optional:
 
 - `key_id` (String) Specific stored client key ID to authenticate with. If omitted, default keys are used.
+
+
+
+<a id="nestedblock--vnc_options"></a>
+### Nested Schema for `vnc_options`
+
+Required:
+
+- `host` (String) The VNC server hostname or IP address
+
+Optional:
+
+- `password` (String, Sensitive) The VNC password; omit for a server without authentication
+- `port` (Number) The VNC server port
