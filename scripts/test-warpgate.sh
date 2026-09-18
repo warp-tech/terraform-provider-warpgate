@@ -8,9 +8,13 @@
 #
 # WARPGATE_VERSION picks a published release; WARPGATE_BIN points at a local
 # build instead (e.g. ../warpgate/target/debug/warpgate) for unreleased APIs.
+#
+# The default has to be a release that carries every API the tests exercise, so
+# it moves with the provider. Pre-releases are only published for Linux, so on
+# other platforms build Warpgate and point WARPGATE_BIN at it.
 set -euo pipefail
 
-VERSION="${WARPGATE_VERSION:-0.28.0}"
+VERSION="${WARPGATE_VERSION:-0.29.0}"
 PORT="${WARPGATE_TEST_PORT:-18888}"
 TOKEN="${WARPGATE_TEST_TOKEN:-acctest-admin-token}"
 RUNDIR="${WARPGATE_TEST_DIR:-${TMPDIR:-/tmp}/warpgate-acctest}"
@@ -39,8 +43,12 @@ start() {
   if [ ! -x "$BIN" ]; then
     local asset
     asset="$(detect_asset)"
-    curl --fail --location --silent --show-error -o "$BIN" \
-      "https://github.com/warp-tech/warpgate/releases/download/v${VERSION}/${asset}" >&2
+    if ! curl --fail --location --silent --show-error -o "$BIN" \
+      "https://github.com/warp-tech/warpgate/releases/download/v${VERSION}/${asset}" >&2; then
+      rm -f "$BIN"
+      echo "No ${asset} in the v${VERSION} release. Build Warpgate and set WARPGATE_BIN to the binary, or set WARPGATE_VERSION to a release built for this platform." >&2
+      exit 1
+    fi
     chmod +x "$BIN"
   fi
 

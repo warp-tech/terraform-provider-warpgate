@@ -134,6 +134,13 @@ func validateCredentialPolicy(attribute string, raw any) error {
 		return nil
 	}
 
+	// The block is Optional+Computed, so a user who never wrote one still gets a
+	// one-element list here - holding nothing until the policy has been read
+	// back from Warpgate. There is no user input to check in that case.
+	if credPolicies[0] == nil {
+		return nil
+	}
+
 	policy, ok := credPolicies[0].(map[string]any)
 	if !ok {
 		return fmt.Errorf("%s must be a map", attribute)

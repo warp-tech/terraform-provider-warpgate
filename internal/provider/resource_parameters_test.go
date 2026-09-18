@@ -366,3 +366,13 @@ func TestCredentialPolicyRoundTripCoversEveryProtocol(t *testing.T) {
 		t.Fatal("expected an unknown protocol key to be rejected")
 	}
 }
+
+// The block is Optional+Computed, so before Warpgate has reported a policy back
+// the plan carries a one-element list with nothing in it. Warpgate versions that
+// do not seed a new user's policy leave it that way, and rejecting it there made
+// every plan fail with "credential_policy must be a map".
+func TestValidateCredentialPolicyAcceptsAnUnreadComputedBlock(t *testing.T) {
+	if err := validateCredentialPolicy("credential_policy", []any{nil}); err != nil {
+		t.Fatalf("expected an unread computed block to pass validation, got %v", err)
+	}
+}
