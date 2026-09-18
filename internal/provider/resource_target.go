@@ -5,12 +5,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/warp-tech/terraform-provider-warpgate/internal/client"
 )
+
+// targetOptionBlocks are the per-protocol configuration blocks; a target carries
+// exactly one of them.
+var targetOptionBlocks = []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "kubernetes_options", "rdp_options", "vnc_options"}
+
+// otherTargetOptionBlocks lists every protocol block except the given one.
+func otherTargetOptionBlocks(except string) []string {
+	var others []string
+	for _, block := range targetOptionBlocks {
+		if block != except {
+			others = append(others, block)
+		}
+	}
+	return others
+}
 
 // resourceTarget creates and returns a schema for the target resource.
 func resourceTarget() *schema.Resource {
@@ -72,6 +88,12 @@ func resourceTarget() *schema.Resource {
 				Computed:    true,
 				Description: "Whether ticket requests require manual approval",
 			},
+			"require_approval": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Hold new sessions to this target until an administrator approves them",
+			},
 			"ticket_max_uses": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -83,7 +105,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"http_options", "mysql_options", "postgres_options", "kubernetes_options", "rdp_options"},
+				ConflictsWith: otherTargetOptionBlocks("ssh_options"),
 				Description:   "SSH target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -165,7 +187,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "mysql_options", "postgres_options", "kubernetes_options", "rdp_options"},
+				ConflictsWith: otherTargetOptionBlocks("http_options"),
 				Description:   "HTTP target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -217,7 +239,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "postgres_options", "kubernetes_options", "rdp_options"},
+				ConflictsWith: otherTargetOptionBlocks("mysql_options"),
 				Description:   "MySQL target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -237,10 +259,21 @@ func resourceTarget() *schema.Resource {
 							Description: "The MySQL username",
 						},
 						"password": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Sensitive:   true,
-							Description: "The MySQL password",
+							Type:          schema.TypeString,
+							Optional:      true,
+							Sensitive:     true,
+							ConflictsWith: []string{"mysql_options.0.iam_role_auth"},
+							Description:   "The MySQL password",
+						},
+						"iam_role_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							MaxItems:      1,
+							ConflictsWith: []string{"mysql_options.0.password"},
+							Description:   "AWS IAM authentication instead of a password",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{},
+							},
 						},
 						"tls": {
 							Type:        schema.TypeList,
@@ -271,7 +304,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "kubernetes_options", "rdp_options"},
+				ConflictsWith: otherTargetOptionBlocks("postgres_options"),
 				Description:   "PostgreSQL target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -298,14 +331,32 @@ func resourceTarget() *schema.Resource {
 						"protocol_version": {
 							Type:         schema.TypeString,
 							Optional:     true,
+							Default:      "3.2",
 							ValidateFunc: validation.StringInSlice([]string{"3.0", "3.2"}, false),
 							Description:  "The PostgreSQL protocol version to request. Valid values: 3.0, 3.2",
 						},
-						"password": {
+						"idle_timeout": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Sensitive:   true,
-							Description: "The PostgreSQL password",
+							Computed:    true,
+							Description: "Idle connection timeout as a duration string, e.g. 10m",
+						},
+						"password": {
+							Type:          schema.TypeString,
+							Optional:      true,
+							Sensitive:     true,
+							ConflictsWith: []string{"postgres_options.0.iam_role_auth"},
+							Description:   "The PostgreSQL password",
+						},
+						"iam_role_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							MaxItems:      1,
+							ConflictsWith: []string{"postgres_options.0.password"},
+							Description:   "AWS IAM authentication instead of a password",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{},
+							},
 						},
 						"tls": {
 							Type:        schema.TypeList,
@@ -336,7 +387,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "rdp_options"},
+				ConflictsWith: otherTargetOptionBlocks("kubernetes_options"),
 				Description:   "Kubernetes target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -371,7 +422,7 @@ func resourceTarget() *schema.Resource {
 							Type:          schema.TypeList,
 							Optional:      true,
 							MaxItems:      1,
-							ConflictsWith: []string{"kubernetes_options.0.certificate_auth"},
+							ConflictsWith: []string{"kubernetes_options.0.certificate_auth", "kubernetes_options.0.iam_role_auth"},
 							Description:   "Token authentication for Kubernetes",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -388,7 +439,7 @@ func resourceTarget() *schema.Resource {
 							Type:          schema.TypeList,
 							Optional:      true,
 							MaxItems:      1,
-							ConflictsWith: []string{"kubernetes_options.0.token_auth"},
+							ConflictsWith: []string{"kubernetes_options.0.token_auth", "kubernetes_options.0.iam_role_auth"},
 							Description:   "Certificate authentication for Kubernetes",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -406,6 +457,16 @@ func resourceTarget() *schema.Resource {
 								},
 							},
 						},
+						"iam_role_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							MaxItems:      1,
+							ConflictsWith: []string{"kubernetes_options.0.token_auth", "kubernetes_options.0.certificate_auth"},
+							Description:   "AWS IAM authentication (EKS) instead of a token or certificate",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{},
+							},
+						},
 					},
 				},
 			},
@@ -414,7 +475,7 @@ func resourceTarget() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "kubernetes_options"},
+				ConflictsWith: otherTargetOptionBlocks("rdp_options"),
 				Description:   "RDP target options",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -459,6 +520,49 @@ func resourceTarget() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"Tls12", "Tls12WithLegacyCiphers", "Tls10Unsafe"}, false),
 							Description:  "TLS security profile for the RDP connection: Tls12, Tls12WithLegacyCiphers, Tls10Unsafe",
 						},
+						"compression": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "remotefx",
+							ValidateFunc: validation.StringInSlice([]string{"remotefx", "lossless"}, false),
+							Description:  "Codec advertised to the RDP server: remotefx, or lossless when Warpgate and the target share a network",
+						},
+						"interactive_logon": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Show the target's own sign-in screen instead of logging on automatically",
+						},
+					},
+				},
+			},
+			// VNC Target Configuration
+			"vnc_options": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: otherTargetOptionBlocks("vnc_options"),
+				Description:   "VNC target options",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The VNC server hostname or IP address",
+						},
+						"port": {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      5900,
+							Description:  "The VNC server port",
+							ValidateFunc: validation.IsPortNumber,
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Sensitive:   true,
+							Description: "The VNC password; omit for a server without authentication",
+						},
 					},
 				},
 			},
@@ -470,21 +574,19 @@ func resourceTarget() *schema.Resource {
 // validateTargetConfig validates the target configuration in a Terraform resource diff,
 // ensuring that exactly one type of target option is specified.
 func validateTargetConfig(ctx context.Context, d *schema.ResourceDiff, meta any) error {
-	optionBlocks := []string{"ssh_options", "http_options", "mysql_options", "postgres_options", "kubernetes_options", "rdp_options"}
-
 	count := 0
-	for _, block := range optionBlocks {
+	for _, block := range targetOptionBlocks {
 		if v, ok := d.GetOk(block); ok && len(v.([]any)) > 0 {
 			count++
 		}
 	}
 
 	if count == 0 {
-		return fmt.Errorf("one of ssh_options, http_options, mysql_options, postgres_options, kubernetes_options, or rdp_options must be specified")
+		return fmt.Errorf("one of %s must be specified", strings.Join(targetOptionBlocks, ", "))
 	}
 
 	if count > 1 {
-		return fmt.Errorf("only one of ssh_options, http_options, mysql_options, postgres_options, kubernetes_options, or rdp_options can be specified")
+		return fmt.Errorf("only one of %s can be specified", strings.Join(targetOptionBlocks, ", "))
 	}
 
 	return nil
@@ -556,12 +658,16 @@ func resourceTargetRead(ctx context.Context, d *schema.ResourceData, meta any) d
 		return diag.FromErr(fmt.Errorf("failed to set ticket_max_duration_seconds: %w", err))
 	}
 
-	if err := setOptionalBool(d, "ticket_requests_disabled", target.TicketRequestsDisabled); err != nil {
+	if err := d.Set("ticket_requests_disabled", target.TicketRequestsDisabled); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set ticket_requests_disabled: %w", err))
 	}
 
-	if err := setOptionalBool(d, "ticket_require_approval", target.TicketRequireApproval); err != nil {
+	if err := d.Set("ticket_require_approval", target.TicketRequireApproval); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set ticket_require_approval: %w", err))
+	}
+
+	if err := d.Set("require_approval", target.RequireApproval); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set require_approval: %w", err))
 	}
 
 	if err := setOptionalInt(d, "ticket_max_uses", target.TicketMaxUses); err != nil {
@@ -629,9 +735,10 @@ func buildTargetDataRequest(d *schema.ResourceData) (*client.TargetDataRequest, 
 		RateLimitBytesPerSecond:  optionalIntPointer(d, rateLimitBytesPerSecondKey),
 		Options:                  targetOptions,
 		TicketMaxDurationSeconds: optionalInt64Pointer(d, "ticket_max_duration_seconds"),
-		TicketRequestsDisabled:   optionalBoolPointer(d, "ticket_requests_disabled"),
-		TicketRequireApproval:    optionalBoolPointer(d, "ticket_require_approval"),
+		TicketRequestsDisabled:   d.Get("ticket_requests_disabled").(bool),
+		TicketRequireApproval:    d.Get("ticket_require_approval").(bool),
 		TicketMaxUses:            optionalIntPointer(d, "ticket_max_uses"),
+		RequireApproval:          d.Get("require_approval").(bool),
 	}, nil
 }
 
@@ -672,6 +779,12 @@ func buildTargetOptions(d *schema.ResourceData) (client.TargetOptions, error) {
 	if v, ok := d.GetOk("rdp_options"); ok && len(v.([]any)) > 0 {
 		rdpOpts := v.([]any)[0].(map[string]any)
 		return buildRDPTargetOptions(rdpOpts)
+	}
+
+	// Check for VNC options
+	if v, ok := d.GetOk("vnc_options"); ok && len(v.([]any)) > 0 {
+		vncOpts := v.([]any)[0].(map[string]any)
+		return buildVNCTargetOptions(vncOpts), nil
 	}
 
 	return nil, fmt.Errorf("no target options specified")
@@ -743,12 +856,9 @@ func buildHTTPTargetOptions(opts map[string]any) (*client.TargetHTTPOptions, err
 		}
 	}
 
-	// Extract headers
-	var headers map[string]string
-	if v, ok := opts["headers"]; ok {
-		headersMap := v.(map[string]any)
-		headers = make(map[string]string)
-		for k, v := range headersMap {
+	headers := map[string]string{}
+	if v, ok := opts["headers"].(map[string]any); ok {
+		for k, v := range v {
 			headers[k] = v.(string)
 		}
 	}
@@ -774,11 +884,6 @@ func buildMysqlTargetOptions(opts map[string]any) (*client.TargetMySQLOptions, e
 	port := opts["port"].(int)
 	username := opts["username"].(string)
 
-	var password string
-	if v, ok := opts["password"]; ok {
-		password = v.(string)
-	}
-
 	// Extract TLS settings
 	var tls client.TLS
 	if v, ok := opts["tls"]; ok {
@@ -794,9 +899,21 @@ func buildMysqlTargetOptions(opts map[string]any) (*client.TargetMySQLOptions, e
 		Host:     host,
 		Port:     port,
 		Username: username,
-		Password: password,
+		Auth:     buildDatabaseTargetAuth(opts),
 		TLS:      tls,
 	}, nil
+}
+
+// buildDatabaseTargetAuth picks the MySQL/PostgreSQL auth method: an
+// iam_role_auth block wins, otherwise the password (possibly empty) is sent.
+func buildDatabaseTargetAuth(opts map[string]any) client.DatabaseTargetAuth {
+	if v, ok := opts["iam_role_auth"].([]any); ok && len(v) > 0 {
+		return &client.DatabaseTargetIamRoleAuth{Kind: "IamRole"}
+	}
+
+	password, _ := opts["password"].(string)
+
+	return &client.DatabaseTargetPasswordAuth{Kind: "Password", Password: password}
 }
 
 // buildPostgresTargetOptions creates PostgreSQL target options from the resource data map.
@@ -815,10 +932,7 @@ func buildPostgresTargetOptions(opts map[string]any) (*client.TargetPostgresOpti
 		protocolVersion = v.(string)
 	}
 
-	var password string
-	if v, ok := opts["password"]; ok {
-		password = v.(string)
-	}
+	idleTimeout, _ := opts["idle_timeout"].(string)
 
 	// Extract TLS settings
 	var tls client.TLS
@@ -836,8 +950,9 @@ func buildPostgresTargetOptions(opts map[string]any) (*client.TargetPostgresOpti
 		Port:                port,
 		Username:            username,
 		DefaultDatabaseName: defaultDatabaseName,
+		IdleTimeout:         idleTimeout,
 		ProtocolVersion:     protocolVersion,
-		Password:            password,
+		Auth:                buildDatabaseTargetAuth(opts),
 		TLS:                 tls,
 	}, nil
 }
@@ -875,8 +990,10 @@ func buildKubernetesTargetOptions(opts map[string]any) (*client.TargetKubernetes
 			Certificate: certificate,
 			PrivateKey:  privateKey,
 		}
+	} else if v, ok := opts["iam_role_auth"]; ok && len(v.([]any)) > 0 {
+		auth = &client.KubernetesTargetIamRoleAuth{Kind: "IamRole"}
 	} else {
-		return nil, fmt.Errorf("kubernetes target requires either token_auth or certificate_auth")
+		return nil, fmt.Errorf("kubernetes target requires token_auth, certificate_auth, or iam_role_auth")
 	}
 
 	return &client.TargetKubernetesOptions{
@@ -906,49 +1023,51 @@ func buildRDPTargetOptions(opts map[string]any) (*client.TargetRDPOptions, error
 		tlsSecurity = v.(string)
 	}
 
+	compression, _ := opts["compression"].(string)
+	interactiveLogon, _ := opts["interactive_logon"].(bool)
+
 	auth := &client.RDPTargetPasswordAuth{
 		Kind:     "Password",
 		Password: password,
 	}
 
 	return &client.TargetRDPOptions{
-		Kind:        "Rdp",
-		Host:        host,
-		Port:        port,
-		Username:    username,
-		Domain:      domain,
-		Auth:        auth,
-		VerifyTLS:   verifyTLS,
-		TLSSecurity: tlsSecurity,
+		Kind:             "Rdp",
+		Host:             host,
+		Port:             port,
+		Username:         username,
+		Domain:           domain,
+		Auth:             auth,
+		VerifyTLS:        verifyTLS,
+		Compression:      compression,
+		InteractiveLogon: interactiveLogon,
+		TLSSecurity:      tlsSecurity,
 	}, nil
+}
+
+// buildVNCTargetOptions creates VNC target options from the resource data map.
+// An empty password selects the server's no-authentication mode.
+func buildVNCTargetOptions(opts map[string]any) *client.TargetVncOptions {
+	var auth client.VncTargetAuth = &client.VncTargetNoneAuth{Kind: "None"}
+	if password, _ := opts["password"].(string); password != "" {
+		auth = &client.VncTargetPasswordAuth{Kind: "Password", Password: password}
+	}
+
+	return &client.TargetVncOptions{
+		Kind: "Vnc",
+		Host: opts["host"].(string),
+		Port: opts["port"].(int),
+		Auth: auth,
+	}
 }
 
 // setTargetOptions populates the appropriate Terraform schema block based on the target type
 // from the Warpgate API.
 func setTargetOptions(d *schema.ResourceData, options any) error {
-	// Reset all options blocks
-	if err := d.Set("ssh_options", []any{}); err != nil {
-		return fmt.Errorf("failed to reset ssh_options: %w", err)
-	}
-
-	if err := d.Set("http_options", []any{}); err != nil {
-		return fmt.Errorf("failed to reset http_options: %w", err)
-	}
-
-	if err := d.Set("mysql_options", []any{}); err != nil {
-		return fmt.Errorf("failed to reset mysql_options: %w", err)
-	}
-
-	if err := d.Set("postgres_options", []any{}); err != nil {
-		return fmt.Errorf("failed to reset postgres_options: %w", err)
-	}
-
-	if err := d.Set("kubernetes_options", []any{}); err != nil {
-		return fmt.Errorf("failed to reset kubernetes_options: %w", err)
-	}
-
-	if err := d.Set("rdp_options", []any{}); err != nil {
-		return fmt.Errorf("failed to reset rdp_options: %w", err)
+	for _, block := range targetOptionBlocks {
+		if err := d.Set(block, []any{}); err != nil {
+			return fmt.Errorf("failed to reset %s: %w", block, err)
+		}
 	}
 
 	// Type assertion based on the "kind" field in the options map
@@ -1053,14 +1172,8 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 			"tls":      []any{tlsOpts},
 		}
 
-		if password, ok := optionsMap["password"].(string); ok && password != "" {
-			mysqlOpts["password"] = password
-		} else if auth, ok := optionsMap["auth"].(map[string]any); ok {
-			if kind, _ := auth["kind"].(string); kind == "Password" {
-				if pw, ok := auth["password"].(string); ok && pw != "" {
-					mysqlOpts["password"] = pw
-				}
-			}
+		if err := setDatabaseTargetAuth(mysqlOpts, optionsMap); err != nil {
+			return err
 		}
 
 		return d.Set("mysql_options", []any{mysqlOpts})
@@ -1091,14 +1204,12 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 			pgOpts["protocol_version"] = protocolVersion
 		}
 
-		if password, ok := optionsMap["password"].(string); ok && password != "" {
-			pgOpts["password"] = password
-		} else if auth, ok := optionsMap["auth"].(map[string]any); ok {
-			if kind, _ := auth["kind"].(string); kind == "Password" {
-				if pw, ok := auth["password"].(string); ok && pw != "" {
-					pgOpts["password"] = pw
-				}
-			}
+		if idleTimeout, ok := optionsMap["idle_timeout"].(string); ok && idleTimeout != "" {
+			pgOpts["idle_timeout"] = idleTimeout
+		}
+
+		if err := setDatabaseTargetAuth(pgOpts, optionsMap); err != nil {
+			return err
 		}
 
 		return d.Set("postgres_options", []any{pgOpts})
@@ -1144,6 +1255,8 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 					"private_key": auth["private_key"],
 				},
 			}
+		case "IamRole":
+			k8sOpts["iam_role_auth"] = []any{map[string]any{}}
 		default:
 			return fmt.Errorf("unknown Kubernetes auth kind: %s", authKind)
 		}
@@ -1152,17 +1265,13 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 
 	case "Rdp":
 		rdpOpts := map[string]any{
-			"host":       optionsMap["host"],
-			"port":       optionsMap["port"],
-			"username":   optionsMap["username"],
-			"verify_tls": optionsMap["verify_tls"],
-			// The API omits tls_security when unset; fall back to the schema
-			// default so an unset value does not read back as a diff.
-			"tls_security": "Tls12",
-		}
-
-		if tlsSecurity, ok := optionsMap["tls_security"].(string); ok && tlsSecurity != "" {
-			rdpOpts["tls_security"] = tlsSecurity
+			"host":              optionsMap["host"],
+			"port":              optionsMap["port"],
+			"username":          optionsMap["username"],
+			"verify_tls":        optionsMap["verify_tls"],
+			"tls_security":      optionsMap["tls_security"],
+			"compression":       optionsMap["compression"],
+			"interactive_logon": optionsMap["interactive_logon"],
 		}
 
 		if domain, ok := optionsMap["domain"].(string); ok && domain != "" {
@@ -1180,9 +1289,48 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 
 		return d.Set("rdp_options", []any{rdpOpts})
 
+	case "Vnc":
+		vncOpts := map[string]any{
+			"host": optionsMap["host"],
+			"port": optionsMap["port"],
+		}
+
+		auth, ok := optionsMap["auth"].(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid auth field in VNC options")
+		}
+
+		if password, ok := auth["password"].(string); ok && password != "" {
+			vncOpts["password"] = password
+		}
+
+		return d.Set("vnc_options", []any{vncOpts})
+
 	default:
 		return fmt.Errorf("unknown target kind: %s", kind)
 	}
+}
+
+// setDatabaseTargetAuth is the read-side mirror of buildDatabaseTargetAuth. An
+// empty password is left unset so a target configured without one stays clean.
+func setDatabaseTargetAuth(block map[string]any, optionsMap map[string]any) error {
+	auth, ok := optionsMap["auth"].(map[string]any)
+	if !ok {
+		return fmt.Errorf("invalid auth field in database options")
+	}
+
+	switch kind, _ := auth["kind"].(string); kind {
+	case "Password":
+		if password, ok := auth["password"].(string); ok && password != "" {
+			block["password"] = password
+		}
+	case "IamRole":
+		block["iam_role_auth"] = []any{map[string]any{}}
+	default:
+		return fmt.Errorf("unknown database auth kind: %s", kind)
+	}
+
+	return nil
 }
 
 // targetOptionsToMap converts target options from the Warpgate API to a map

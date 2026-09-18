@@ -46,6 +46,7 @@ locals {
   is_postgres   = length(data.warpgate_target.server.postgres_options) > 0
   is_kubernetes = length(data.warpgate_target.server.kubernetes_options) > 0
   is_rdp        = length(data.warpgate_target.server.rdp_options) > 0
+  is_vnc        = length(data.warpgate_target.server.vnc_options) > 0
 
   # Safely access target details
   host = local.is_ssh ? data.warpgate_target.server.ssh_options[0].host :
@@ -54,6 +55,7 @@ locals {
          local.is_postgres ? data.warpgate_target.server.postgres_options[0].host :
          local.is_kubernetes ? data.warpgate_target.server.kubernetes_options[0].cluster_url :
          local.is_rdp ? data.warpgate_target.server.rdp_options[0].host :
+         local.is_vnc ? data.warpgate_target.server.vnc_options[0].host :
          "unknown"
 }
 
@@ -64,6 +66,7 @@ output "target_type" {
           local.is_postgres ? "PostgreSQL" :
           local.is_kubernetes ? "Kubernetes" :
           local.is_rdp ? "RDP" :
+          local.is_vnc ? "VNC" :
           "unknown"
 }
 
@@ -125,6 +128,7 @@ Based on the target type, one of the following option blocks will be populated:
   - `username` - The PostgreSQL username.
   - `default_database_name` - The default PostgreSQL database name to connect to.
   - `protocol_version` - The PostgreSQL protocol version requested by the target.
+  - `idle_timeout` - Idle connection timeout as a duration string.
   - `password` - The PostgreSQL password.
   - `tls` - TLS configuration.
     - `mode` - TLS mode (Disabled, Preferred, Required).
@@ -140,6 +144,7 @@ Based on the target type, one of the following option blocks will be populated:
   - `certificate_auth` - Certificate authentication configuration (if applicable).
     - `certificate` - The client certificate PEM.
     - `private_key` - The client private key PEM.
+  - `iam_role_auth` - Present when the target authenticates with the AWS IAM role Warpgate runs under.
 
 - `rdp_options` - Configuration for RDP targets.
   - `host` - The RDP server hostname or IP address.
@@ -149,5 +154,10 @@ Based on the target type, one of the following option blocks will be populated:
   - `password` - The password for RDP authentication.
   - `verify_tls` - Whether the RDP server's TLS certificate is verified.
   - `tls_security` - The TLS security profile (Tls12, Tls12WithLegacyCiphers, Tls10Unsafe).
+
+- `vnc_options` - Configuration for VNC targets.
+  - `host` - The VNC server hostname or IP address.
+  - `port` - The VNC server port.
+  - `password` - The VNC password, empty for a server without authentication.
 
 {{ .SchemaMarkdown | trimspace }}

@@ -33,6 +33,12 @@ func resourceRole() *schema.Resource {
 				Optional:    true,
 				Description: "The description of the role",
 			},
+			"is_default": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Assign this role to every newly created user",
+			},
 		},
 	}
 }
@@ -51,6 +57,7 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, meta any) d
 	req := &client.RoleCreateRequest{
 		Name:        name,
 		Description: description,
+		IsDefault:   d.Get("is_default").(bool),
 	}
 
 	role, err := c.CreateRole(ctx, req)
@@ -92,6 +99,10 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, meta any) dia
 		return diag.FromErr(fmt.Errorf("failed to set description: %w", err))
 	}
 
+	if err := d.Set("is_default", role.IsDefault); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set is_default: %w", err))
+	}
+
 	return diags
 }
 
@@ -108,6 +119,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, meta any) d
 	req := &client.RoleCreateRequest{
 		Name:        name,
 		Description: description,
+		IsDefault:   d.Get("is_default").(bool),
 	}
 
 	_, err := c.UpdateRole(ctx, id, req)

@@ -74,6 +74,23 @@ resource "warpgate_parameters" "test" {
 }
 `
 
+const testAccParametersApprovalAndMfaFields = `
+resource "warpgate_parameters" "test" {
+  allow_own_credential_management = true
+
+  mfa_enforcement                     = "Enroll"
+  mfa_policy_exempt_sso_users         = true
+  record_desktop_keyboard_input       = false
+  admin_approval_timeout_seconds      = 600
+  admin_approval_grace_period_seconds = 3600
+
+  default_credential_policy {
+    ssh = ["Password", "Totp"]
+    rdp = ["Password"]
+  }
+}
+`
+
 const testAccParameters028Fields = `
 resource "warpgate_parameters" "test" {
 	allow_own_credential_management = true
@@ -271,4 +288,39 @@ func testAccCheckRecordingsStorage(t *testing.T, check func(*testing.T, recordin
 
 		return check(t, got)
 	}
+}
+
+func TestAccParametersApprovalAndMfaFields(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccParametersApprovalAndMfaFields,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("warpgate_parameters.test", "mfa_enforcement", "Enroll"),
+					resource.TestCheckResourceAttr("warpgate_parameters.test", "admin_approval_timeout_seconds", "600"),
+					resource.TestCheckResourceAttr("warpgate_parameters.test", "default_credential_policy.0.ssh.#", "2"),
+					resource.TestCheckResourceAttr("warpgate_parameters.test", "default_credential_policy.0.rdp.0", "Password"),
+					func(*terraform.State) error {
+						params := testAccParameters(t)
+
+						if params.MfaEnforcement != "Enroll" || !params.MfaPolicyExemptSsoUsers {
+							return fmt.Errorf("expected the MFA policy in Warpgate, got %q / %v", params.MfaEnforcement, params.MfaPolicyExemptSsoUsers)
+						}
+
+						if params.AdminApprovalTimeoutSeconds != 600 || params.AdminApprovalGracePeriodSeconds != 3600 {
+							return fmt.Errorf("expected the approval timings in Warpgate, got %d / %d", params.AdminApprovalTimeoutSeconds, params.AdminApprovalGracePeriodSeconds)
+						}
+
+						if got := params.DefaultCredentialPolicy.Rdp; len(got) != 1 || got[0] != "Password" {
+							return fmt.Errorf("expected the rdp policy in Warpgate, got %v", got)
+						}
+
+						return nil
+					},
+				),
+			},
+		},
+	})
 }

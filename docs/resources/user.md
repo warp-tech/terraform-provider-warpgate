@@ -164,6 +164,9 @@ tofu import warpgate_user.eugene 12345678-1234-1234-1234-123456789012
 Optional:
 
 - `http` (List of String)
+- `kubernetes` (List of String)
 - `mysql` (List of String)
 - `postgres` (List of String)
+- `rdp` (List of String)
 - `ssh` (List of String)
+- `vnc` (List of String)

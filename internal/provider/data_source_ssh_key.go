@@ -107,7 +107,7 @@ func dataSourceSSHKeyRead(ctx context.Context, d *schema.ResourceData, meta any)
 	if err := d.Set("public_key", key.PublicKey); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set public_key: %w", err))
 	}
-	if err := d.Set("public_key_base64", key.PublicKeyBase64); err != nil {
+	if err := d.Set("public_key_base64", key.PublicKeyBase64()); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set public_key_base64: %w", err))
 	}
 	if err := d.Set("is_default", key.IsDefault); err != nil {

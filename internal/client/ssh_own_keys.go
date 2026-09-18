@@ -5,16 +5,26 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // SSHClientKey represents an SSH key managed by Warpgate (own client keys)
 type SSHClientKey struct {
-	ID              string `json:"id"`
-	Label           string `json:"label"`
-	Kind            string `json:"kind"`
-	PublicKey       string `json:"public_key"`
-	PublicKeyBase64 string `json:"public_key_base64"`
-	IsDefault       bool   `json:"is_default"`
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	Kind      string `json:"kind"`
+	PublicKey string `json:"public_key"`
+	IsDefault bool   `json:"is_default"`
+}
+
+// PublicKeyBase64 is the key body without the algorithm prefix, i.e. the second
+// field of an authorized_keys line. The API only carries the full line.
+func (k SSHClientKey) PublicKeyBase64() string {
+	if fields := strings.Fields(k.PublicKey); len(fields) > 1 {
+		return fields[1]
+	}
+
+	return ""
 }
 
 // SSHOwnKey is an alias for SSHClientKey for backward compatibility

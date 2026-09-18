@@ -29,6 +29,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the role. Must be unique within the Warpgate instance.
 * `description` - (Optional) A human-readable description of the role and its purpose.
+* `is_default` - (Optional) Assign this role to every newly created user. Default: `false`.
 
 ## Attribute Reference
 
@@ -67,6 +68,7 @@ tofu import warpgate_role.developers 12345678-1234-1234-1234-123456789012
 ### Optional
 
 - `description` (String) The description of the role
+- `is_default` (Boolean) Assign this role to every newly created user
 
 ### Read-Only
 

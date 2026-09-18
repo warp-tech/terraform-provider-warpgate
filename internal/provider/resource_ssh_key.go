@@ -27,11 +27,12 @@ func resourceSSHKey() *schema.Resource {
 				Description: "Label identifying this SSH key",
 			},
 			"kind": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    true,
-				Description: "The key type for key generation (e.g. Ed25519, Rsa4096). Defaults to Ed25519 when generating.",
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: suppressSSHKeyKindDiff,
+				Description:      "The key type for key generation: Ed25519 or Rsa. Defaults to Ed25519 when generating.",
 			},
 			"secret_key": {
 				Type:        schema.TypeString,
@@ -136,7 +137,7 @@ func resourceSSHKeyRead(ctx context.Context, d *schema.ResourceData, meta any) d
 	if err := d.Set("public_key", key.PublicKey); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set public_key: %w", err))
 	}
-	if err := d.Set("public_key_base64", key.PublicKeyBase64); err != nil {
+	if err := d.Set("public_key_base64", key.PublicKeyBase64()); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set public_key_base64: %w", err))
 	}
 	if err := d.Set("is_default", key.IsDefault); err != nil {

@@ -13,12 +13,14 @@ type Role struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
+	IsDefault   bool   `json:"is_default"`
 }
 
 // RoleCreateRequest is the request payload for creating a role
 type RoleCreateRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
+	IsDefault   bool   `json:"is_default"`
 }
 
 // GetRoles retrieves all roles from the Warpgate API, optionally filtered by

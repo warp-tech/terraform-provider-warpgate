@@ -40,44 +40,7 @@ func resourceUser() *schema.Resource {
 				Description:  "Bandwidth limit in bytes per second",
 				ValidateFunc: validation.IntAtLeast(0),
 			},
-			"credential_policy": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Description: "The credential policy for the user",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"http": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"ssh": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"mysql": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"postgres": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-					},
-				},
-			},
+			"credential_policy": credentialPolicySchema("The credential policy for the user"),
 			"allowed_ip_ranges": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -235,91 +198,6 @@ func buildUserUpdateRequest(d *schema.ResourceData) *client.UserUpdateRequest {
 	return req
 }
 
-// expandCredentialPolicy converts a Terraform schema representation of credential policy
-// to the Warpgate API client structure.
-func expandCredentialPolicy(policyList []any) *client.UserRequireCredentialsPolicy {
-	if len(policyList) == 0 {
-		return nil
-	}
-
-	policyMap := policyList[0].(map[string]any)
-	policy := &client.UserRequireCredentialsPolicy{}
-
-	if v, ok := policyMap["http"]; ok && v != nil {
-		policy.HTTP = expandCredentialKindList(v.([]any))
-	}
-
-	if v, ok := policyMap["ssh"]; ok && v != nil {
-		policy.SSH = expandCredentialKindList(v.([]any))
-	}
-
-	if v, ok := policyMap["mysql"]; ok && v != nil {
-		policy.MySQL = expandCredentialKindList(v.([]any))
-	}
-
-	if v, ok := policyMap["postgres"]; ok && v != nil {
-		policy.Postgres = expandCredentialKindList(v.([]any))
-	}
-
-	return policy
-}
-
-// expandCredentialKindList converts a list of credential kinds from Terraform schema format
-// to the Warpgate API client format.
-func expandCredentialKindList(list []any) []client.CredentialKind {
-	if len(list) == 0 {
-		return nil
-	}
-
-	result := make([]client.CredentialKind, len(list))
-	for i, v := range list {
-		result[i] = client.CredentialKind(v.(string))
-	}
-	return result
-}
-
-// flattenCredentialPolicy converts a Warpgate API credential policy structure
-// to the Terraform schema representation.
-func flattenCredentialPolicy(policy *client.UserRequireCredentialsPolicy) []any {
-	if policy == nil {
-		return nil
-	}
-
-	result := make(map[string]any)
-
-	if policy.HTTP != nil {
-		result["http"] = flattenCredentialKindList(policy.HTTP)
-	}
-
-	if policy.SSH != nil {
-		result["ssh"] = flattenCredentialKindList(policy.SSH)
-	}
-
-	if policy.MySQL != nil {
-		result["mysql"] = flattenCredentialKindList(policy.MySQL)
-	}
-
-	if policy.Postgres != nil {
-		result["postgres"] = flattenCredentialKindList(policy.Postgres)
-	}
-
-	return []any{result}
-}
-
-// flattenCredentialKindList converts a list of credential kinds from Warpgate API format
-// to the Terraform schema format.
-func flattenCredentialKindList(list []client.CredentialKind) []any {
-	if len(list) == 0 {
-		return nil
-	}
-
-	result := make([]any, len(list))
-	for i, v := range list {
-		result[i] = string(v)
-	}
-	return result
-}
-
 // expandAllowedIPRanges converts the allowed_ip_ranges from Terraform schema to the API format.
 func expandAllowedIPRanges(d *schema.ResourceData) *[]string {
 	v, ok := d.GetOk("allowed_ip_ranges")
@@ -338,46 +216,7 @@ func expandAllowedIPRanges(d *schema.ResourceData) *[]string {
 // ensuring that credential policies are correctly formatted.
 func validateUserConfig(ctx context.Context, d *schema.ResourceDiff, meta any) error {
 	if v, ok := d.GetOk("credential_policy"); ok {
-		credPolicies, ok := v.([]any)
-		if !ok || len(credPolicies) == 0 {
-			return nil
-		}
-
-		policy, ok := credPolicies[0].(map[string]any)
-		if !ok {
-			return fmt.Errorf("credential_policy must be a map")
-		}
-
-		// Valid credential kinds
-		validKinds := map[string]bool{
-			"Password":        true,
-			"PublicKey":       true,
-			"Totp":            true,
-			"Sso":             true,
-			"WebUserApproval": true,
-		}
-
-		// Validate each field
-		for key, val := range policy {
-			// Validate only for known keys
-			if key != "http" && key != "ssh" && key != "mysql" && key != "postgres" {
-				return fmt.Errorf("unknown credential policy key: %s", key)
-			}
-
-			// Ensure the value is a list
-			valueList, ok := val.([]any)
-			if !ok {
-				return fmt.Errorf("credential_policy.%s must be a list", key)
-			}
-
-			// Validate each credential kind in the list
-			for i, kind := range valueList {
-				kindStr, ok := kind.(string)
-				if !ok || !validKinds[kindStr] {
-					return fmt.Errorf("credential_policy.%s[%d]: %s is not a valid credential kind", key, i, kindStr)
-				}
-			}
-		}
+		return validateCredentialPolicy("credential_policy", v)
 	}
 
 	return nil

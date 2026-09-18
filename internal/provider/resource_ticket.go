@@ -83,7 +83,7 @@ func resourceTicketCreate(ctx context.Context, d *schema.ResourceData, meta any)
 
 	ticket, err := c.CreateTicket(ctx, req)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("failed to create role: %w", err))
+		return diag.FromErr(fmt.Errorf("failed to create ticket: %w", err))
 	}
 
 	d.SetId(ticket.Ticket.ID)

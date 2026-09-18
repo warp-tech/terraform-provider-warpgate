@@ -73,7 +73,7 @@ func flattenSSHOwnKeys(keys []client.SSHClientKey) []any {
 			"label":             key.Label,
 			"kind":              key.Kind,
 			"public_key":        key.PublicKey,
-			"public_key_base64": key.PublicKeyBase64,
+			"public_key_base64": key.PublicKeyBase64(),
 			"is_default":        key.IsDefault,
 		}
 	}

@@ -35,6 +35,11 @@ func dataSourceRole() *schema.Resource {
 				Computed:    true,
 				Description: "The description of the role",
 			},
+			"is_default": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Whether the role is assigned to every newly created user",
+			},
 		},
 	}
 }
@@ -94,6 +99,10 @@ func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, meta any) d
 
 	if err := d.Set("description", role.Description); err != nil {
 		return diag.FromErr(fmt.Errorf("failed to set description: %w", err))
+	}
+
+	if err := d.Set("is_default", role.IsDefault); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set is_default: %w", err))
 	}
 
 	return diags

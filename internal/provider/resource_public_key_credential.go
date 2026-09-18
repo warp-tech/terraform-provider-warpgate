@@ -31,9 +31,10 @@ func resourcePublicKeyCredential() *schema.Resource {
 				Description: "A label for the public key",
 			},
 			"public_key": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The OpenSSH public key",
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: suppressSSHPublicKeyDiff,
+				Description:      "The OpenSSH public key",
 			},
 			"date_added": {
 				Type:        schema.TypeString,

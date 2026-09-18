@@ -5,6 +5,9 @@
 #   eval "$(scripts/test-warpgate.sh start)"
 #   TF_ACC=1 go test ./internal/provider/ -run TestAcc -v
 #   scripts/test-warpgate.sh stop
+#
+# WARPGATE_VERSION picks a published release; WARPGATE_BIN points at a local
+# build instead (e.g. ../warpgate/target/debug/warpgate) for unreleased APIs.
 set -euo pipefail
 
 VERSION="${WARPGATE_VERSION:-0.28.0}"
@@ -12,7 +15,7 @@ PORT="${WARPGATE_TEST_PORT:-18888}"
 TOKEN="${WARPGATE_TEST_TOKEN:-acctest-admin-token}"
 RUNDIR="${WARPGATE_TEST_DIR:-${TMPDIR:-/tmp}/warpgate-acctest}"
 
-BIN="$RUNDIR/warpgate-v${VERSION}"
+BIN="${WARPGATE_BIN:-$RUNDIR/warpgate-v${VERSION}}"
 PIDFILE="$RUNDIR/warpgate.pid"
 
 detect_asset() {
