@@ -93,7 +93,9 @@ jobs:
 
       # The script prints the `export KEY=value` lines the tests need.
       - name: Start Warpgate
-        run: scripts/test-warpgate.sh start | sed 's/^export //' >> "$GITHUB_ENV"
+        run: |
+          set -o pipefail
+          scripts/test-warpgate.sh start | sed 's/^export //' >> "$GITHUB_ENV"
 
       - name: Acceptance tests
         env:
