@@ -1,0 +1,45 @@
+---
+page_title: "warpgate_admin_role Data Source - terraform-provider-warpgate"
+subcategory: ""
+description: |-
+  Retrieves information about an admin role in Warpgate.
+---
+
+# warpgate_admin_role (Data Source)
+
+Retrieves an admin role by ID or name, including the permissions it grants. Useful for assigning the built-in `warpgate:admin` role, which exists on every instance and cannot be created with Terraform.
+
+## Example Usage
+
+```hcl
+data "warpgate_admin_role" "builtin" {
+  name = "warpgate:admin"
+}
+
+resource "warpgate_user" "root" {
+  username = "root"
+}
+
+resource "warpgate_user_admin_role" "root_admin" {
+  user_id       = warpgate_user.root.id
+  admin_role_id = data.warpgate_admin_role.builtin.id
+}
+```
+
+## Argument Reference
+
+One of the following arguments must be specified:
+
+* `id` - (Optional) The ID of the admin role.
+* `name` - (Optional) The name of the admin role.
+
+## Attribute Reference
+
+The following attributes are exported:
+
+* `id` - The ID of the admin role.
+* `name` - The name of the admin role.
+* `description` - The description of the admin role.
+* One boolean attribute per admin permission, named as in the `warpgate_admin_role` resource (`sessions_view`, `targets_edit`, ...).
+
+{{ .SchemaMarkdown | trimspace }}
