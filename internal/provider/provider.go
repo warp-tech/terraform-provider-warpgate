@@ -40,9 +40,11 @@ func New(version string) func() *schema.Provider {
 			},
 			ResourcesMap: map[string]*schema.Resource{
 				"warpgate_role":                  resourceRole(),
+				"warpgate_admin_role":            resourceAdminRole(),
 				"warpgate_user":                  resourceUser(),
 				"warpgate_target":                resourceTarget(),
 				"warpgate_user_role":             resourceUserRole(),
+				"warpgate_user_admin_role":       resourceUserAdminRole(),
 				"warpgate_target_role":           resourceTargetRole(),
 				"warpgate_target_group":          resourceTargetGroup(),
 				"warpgate_password_credential":   resourcePasswordCredential(),
@@ -54,6 +56,7 @@ func New(version string) func() *schema.Provider {
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"warpgate_role":         dataSourceRole(),
+				"warpgate_admin_role":   dataSourceAdminRole(),
 				"warpgate_user":         dataSourceUser(),
 				"warpgate_target":       dataSourceTarget(),
 				"warpgate_ssh_own_keys": dataSourceSSHOwnKeys(),

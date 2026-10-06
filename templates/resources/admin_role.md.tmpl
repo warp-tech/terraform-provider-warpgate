@@ -1,0 +1,96 @@
+---
+page_title: "warpgate_admin_role Resource - terraform-provider-warpgate"
+subcategory: ""
+description: |-
+  Manages an admin role in Warpgate. Admin roles grant permissions in the admin UI and API.
+---
+
+# warpgate_admin_role (Resource)
+
+Manages an admin role in Warpgate. An admin role is a named set of permissions in the admin UI and API, such as viewing and terminating sessions or editing targets. It is assigned to users with `warpgate_user_admin_role`, or through the `admin_role_mappings` of an SSO provider.
+
+Admin roles are separate from `warpgate_role`, which grants users access to targets.
+
+A user with any admin permission can read everything in the admin UI; the permissions control what they can change. Every permission defaults to `false`, so a role grants only what is listed.
+
+## Example Usage
+
+```hcl
+# A security team that can watch, stop and approve sessions, but not change
+# the configuration.
+resource "warpgate_admin_role" "security" {
+  name        = "security"
+  description = "Security team"
+
+  sessions_view      = true
+  sessions_terminate = true
+  approve_sessions   = true
+  recordings_view    = true
+  tickets_delete     = true
+}
+
+resource "warpgate_admin_role" "target_operators" {
+  name = "target-operators"
+
+  targets_create = true
+  targets_edit   = true
+  targets_delete = true
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `name` - (Required) The name of the admin role. Must be unique within the Warpgate instance.
+* `description` - (Optional) A human-readable description of the admin role and its purpose.
+* `targets_create` - (Optional) Allow creating targets. Default: `false`.
+* `targets_edit` - (Optional) Allow editing targets. Default: `false`.
+* `targets_delete` - (Optional) Allow deleting targets. Default: `false`.
+* `users_create` - (Optional) Allow creating users. Default: `false`.
+* `users_edit` - (Optional) Allow editing users. Default: `false`.
+* `users_delete` - (Optional) Allow deleting users. Default: `false`.
+* `access_roles_create` - (Optional) Allow creating access roles. Default: `false`.
+* `access_roles_edit` - (Optional) Allow editing access roles. Default: `false`.
+* `access_roles_delete` - (Optional) Allow deleting access roles. Default: `false`.
+* `access_roles_assign` - (Optional) Allow assigning access roles to users and targets. Default: `false`.
+* `sessions_view` - (Optional) Allow viewing sessions. Default: `false`.
+* `sessions_terminate` - (Optional) Allow terminating sessions. Default: `false`.
+* `approve_sessions` - (Optional) Allow approving sessions that wait for an administrator. Default: `false`.
+* `recordings_view` - (Optional) Allow viewing session recordings. Default: `false`.
+* `tickets_create` - (Optional) Allow creating tickets. Default: `false`.
+* `tickets_delete` - (Optional) Allow deleting tickets. Default: `false`.
+* `config_edit` - (Optional) Allow editing the global parameters. Default: `false`.
+* `admin_roles_manage` - (Optional) Allow managing admin roles and their assignments. Default: `false`.
+* `ticket_requests_manage` - (Optional) Allow approving and denying ticket requests. Default: `false`.
+
+## Attribute Reference
+
+In addition to all arguments above, the following attributes are exported:
+
+* `id` - The ID of the admin role.
+
+## Import
+
+### Declarative Import Block (Terraform 1.5+ / OpenTofu 1.6+)
+
+```hcl
+import {
+  to = warpgate_admin_role.security
+  id = "12345678-1234-1234-1234-123456789012"
+}
+```
+
+### CLI Command (Terraform / OpenTofu)
+
+```shell
+# Using Terraform CLI
+terraform import warpgate_admin_role.security 12345678-1234-1234-1234-123456789012
+
+# Using OpenTofu CLI
+tofu import warpgate_admin_role.security 12345678-1234-1234-1234-123456789012
+```
+
+The built-in `warpgate:admin` role can be imported, but Warpgate refuses to delete it.
+
+{{ .SchemaMarkdown | trimspace }}

@@ -75,10 +75,12 @@ export WARPGATE_TOKEN="your-api-token"
 #### Resources
 
 - `warpgate_role` - Manage Warpgate roles
+- `warpgate_admin_role` - Manage admin roles (permissions in the admin UI and API)
 - `warpgate_user` - Manage Warpgate users
 - `warpgate_target` - Manage Warpgate targets (SSH, HTTP, MySQL, PostgreSQL, Kubernetes, RDP, VNC)
 - `warpgate_target_group` - Manage target groups
 - `warpgate_user_role` - Manage role assignments to users
+- `warpgate_user_admin_role` - Manage admin role assignments to users
 - `warpgate_target_role` - Manage role assignments to targets
 - `warpgate_password_credential` - Manage password credentials for users
 - `warpgate_public_key_credential` - Manage SSH public key credentials for users
@@ -90,6 +92,7 @@ export WARPGATE_TOKEN="your-api-token"
 #### Data Sources
 
 - `warpgate_role` - Retrieve information about a Warpgate role
+- `warpgate_admin_role` - Retrieve information about an admin role
 - `warpgate_user` - Retrieve information about a Warpgate user
 - `warpgate_target` - Retrieve information about a Warpgate target
 - `warpgate_ssh_key` - Retrieve one of Warpgate's stored SSH client keys
