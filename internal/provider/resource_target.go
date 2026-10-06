@@ -1064,16 +1064,19 @@ func buildVNCTargetOptions(opts map[string]any) *client.TargetVncOptions {
 // setTargetOptions populates the appropriate Terraform schema block based on the target type
 // from the Warpgate API.
 func setTargetOptions(d *schema.ResourceData, options any) error {
-	for _, block := range targetOptionBlocks {
-		if err := d.Set(block, []any{}); err != nil {
-			return fmt.Errorf("failed to reset %s: %w", block, err)
-		}
-	}
-
 	// Type assertion based on the "kind" field in the options map
 	optionsMap, err := targetOptionsToMap(options)
 	if err != nil {
 		return fmt.Errorf("failed to convert target options to map: %w", err)
+	}
+
+	// Has to read the state before the reset below clears it
+	keepEncryptedSecretsFromState(d, optionsMap)
+
+	for _, block := range targetOptionBlocks {
+		if err := d.Set(block, []any{}); err != nil {
+			return fmt.Errorf("failed to reset %s: %w", block, err)
+		}
 	}
 
 	kind, ok := optionsMap["kind"].(string)
@@ -1308,6 +1311,48 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 
 	default:
 		return fmt.Errorf("unknown target kind: %s", kind)
+	}
+}
+
+// encryptedValuePrefix marks a credential Warpgate keeps encrypted at rest
+// (WARPGATE_ENCRYPTION_KEY). The API only ever returns such a credential encrypted.
+const encryptedValuePrefix = "wgenc:"
+
+// encryptedSecretPaths maps, per target kind, the auth fields Warpgate encrypts
+// to where Terraform keeps them.
+var encryptedSecretPaths = map[string]map[string]string{
+	"Ssh":      {"password": "ssh_options.0.password_auth.0.password"},
+	"MySql":    {"password": "mysql_options.0.password"},
+	"Postgres": {"password": "postgres_options.0.password"},
+	"Rdp":      {"password": "rdp_options.0.password"},
+	"Vnc":      {"password": "vnc_options.0.password"},
+	"Kubernetes": {
+		"token":       "kubernetes_options.0.token_auth.0.token",
+		"private_key": "kubernetes_options.0.certificate_auth.0.private_key",
+	},
+}
+
+// keepEncryptedSecretsFromState replaces encrypted credentials returned by the API
+// with the plaintext already in state. Each write re-encrypts with a fresh nonce,
+// so the encrypted value never matches the configuration and would otherwise show
+// up as a change on every plan. Without a value in state (import, data source) the
+// encrypted value is kept. Changes made outside Terraform can't be detected for
+// encrypted credentials.
+func keepEncryptedSecretsFromState(d *schema.ResourceData, optionsMap map[string]any) {
+	kind, _ := optionsMap["kind"].(string)
+	auth, ok := optionsMap["auth"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	for field, statePath := range encryptedSecretPaths[kind] {
+		value, _ := auth[field].(string)
+		if !strings.HasPrefix(value, encryptedValuePrefix) {
+			continue
+		}
+		if known, _ := d.Get(statePath).(string); known != "" {
+			auth[field] = known
+		}
 	}
 }
 

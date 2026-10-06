@@ -469,3 +469,70 @@ func TestPostgresTargetOptionsIdleTimeoutRoundTrip(t *testing.T) {
 		t.Fatalf("expected idle_timeout 30m in state, got %v", got)
 	}
 }
+
+func TestSetTargetOptionsKeepsEncryptedSecretsFromState(t *testing.T) {
+	const envelope = "wgenc:v1:418b53b7:Ts4o+niLGXQHn1uucaPOKO"
+	tls := map[string]any{"mode": "Required", "verify": true}
+
+	cases := map[string]struct {
+		block   string
+		path    string
+		options func(secret string) map[string]any
+	}{
+		"ssh": {"ssh_options", "ssh_options.0.password_auth.0.password", func(s string) map[string]any {
+			return map[string]any{"kind": "Ssh", "host": "h", "port": 22, "username": "u", "allow_insecure_algos": false,
+				"auth": map[string]any{"kind": "Password", "password": s}}
+		}},
+		"mysql": {"mysql_options", "mysql_options.0.password", func(s string) map[string]any {
+			return map[string]any{"kind": "MySql", "host": "h", "port": 3306, "username": "u", "tls": tls,
+				"auth": map[string]any{"kind": "Password", "password": s}}
+		}},
+		"postgres": {"postgres_options", "postgres_options.0.password", func(s string) map[string]any {
+			return map[string]any{"kind": "Postgres", "host": "h", "port": 5432, "username": "u", "tls": tls,
+				"auth": map[string]any{"kind": "Password", "password": s}}
+		}},
+		"rdp": {"rdp_options", "rdp_options.0.password", func(s string) map[string]any {
+			return map[string]any{"kind": "Rdp", "host": "h", "port": 3389, "username": "u",
+				"auth": map[string]any{"kind": "Password", "password": s}}
+		}},
+		"vnc": {"vnc_options", "vnc_options.0.password", func(s string) map[string]any {
+			return map[string]any{"kind": "Vnc", "host": "h", "port": 5900,
+				"auth": map[string]any{"kind": "Password", "password": s}}
+		}},
+		"kubernetes token": {"kubernetes_options", "kubernetes_options.0.token_auth.0.token", func(s string) map[string]any {
+			return map[string]any{"kind": "Kubernetes", "cluster_url": "https://k", "tls": tls,
+				"auth": map[string]any{"kind": "Token", "token": s}}
+		}},
+		"kubernetes private key": {"kubernetes_options", "kubernetes_options.0.certificate_auth.0.private_key", func(s string) map[string]any {
+			return map[string]any{"kind": "Kubernetes", "cluster_url": "https://k", "tls": tls,
+				"auth": map[string]any{"kind": "Certificate", "certificate": "cert", "private_key": s}}
+		}},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			read := func(state, served string) string {
+				d := schema.TestResourceDataRaw(t, resourceTarget().Schema, map[string]any{})
+				if state != "" {
+					if err := setTargetOptions(d, tc.options(state)); err != nil {
+						t.Fatalf("seeding state: %v", err)
+					}
+				}
+				if err := setTargetOptions(d, tc.options(served)); err != nil {
+					t.Fatalf("setTargetOptions returned error: %v", err)
+				}
+				return d.Get(tc.path).(string)
+			}
+
+			if got := read("plain", envelope); got != "plain" {
+				t.Fatalf("encrypted value should keep the state value, got %q", got)
+			}
+			if got := read("", envelope); got != envelope {
+				t.Fatalf("without state the encrypted value should be kept, got %q", got)
+			}
+			if got := read("plain", "changed"); got != "changed" {
+				t.Fatalf("a plaintext value from the API should win, got %q", got)
+			}
+		})
+	}
+}
