@@ -116,6 +116,6 @@ provider "warpgate" {
 
 ### Optional
 
-- `headers` (Map of String, Sensitive) Additional HTTP headers sent with every API request, for example the service token headers of an access proxy in front of Warpgate. They cannot override the `X-Warpgate-Token`, `Content-Type` and `Accept` headers the provider sets.
+- `headers` (Map of String, Sensitive) Additional HTTP headers sent with every API request, for example the service token headers of an access proxy in front of Warpgate. They cannot override the `X-Warpgate-Token`, `Content-Type` and `Accept` headers the provider sets. `Host`, `Content-Length`, `Transfer-Encoding` and `Trailer` are rejected, because the HTTP client never sends them from a header map.
 - `insecure_skip_verify` (Boolean) Whether to skip the TLS certificate verification (self-signed certificates)
 - `token` (String, Sensitive) API token for authenticating with Warpgate API

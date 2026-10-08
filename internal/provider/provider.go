@@ -4,6 +4,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -42,7 +43,7 @@ func New(version string) func() *schema.Provider {
 					Optional:    true,
 					Sensitive:   true,
 					Elem:        &schema.Schema{Type: schema.TypeString},
-					Description: "Additional HTTP headers sent with every API request, for example the service token headers of an access proxy in front of Warpgate. They cannot override the `X-Warpgate-Token`, `Content-Type` and `Accept` headers the provider sets.",
+					Description: "Additional HTTP headers sent with every API request, for example the service token headers of an access proxy in front of Warpgate. They cannot override the `X-Warpgate-Token`, `Content-Type` and `Accept` headers the provider sets. `Host`, `Content-Length`, `Transfer-Encoding` and `Trailer` are rejected, because the HTTP client never sends them from a header map.",
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
@@ -93,9 +94,9 @@ func configure() func(context.Context, *schema.ResourceData) (any, diag.Diagnost
 		token := d.Get("token").(string)
 		insecureSkipVerify := d.Get("insecure_skip_verify").(bool)
 
-		headers := map[string]string{}
-		for name, value := range d.Get("headers").(map[string]any) {
-			headers[name] = value.(string)
+		headers, err := providerHeaders(d.Get("headers").(map[string]any))
+		if err != nil {
+			return nil, diag.FromErr(err)
 		}
 
 		// Ensure the host has the API path
@@ -126,6 +127,28 @@ func configure() func(context.Context, *schema.ResourceData) (any, diag.Diagnost
 
 		return meta, diags
 	}
+}
+
+// unsendableHeaders are set by Go's HTTP client from the request itself and
+// silently dropped from a header map, so configuring them would have no effect.
+var unsendableHeaders = map[string]bool{
+	"Host":              true,
+	"Content-Length":    true,
+	"Transfer-Encoding": true,
+	"Trailer":           true,
+}
+
+// providerHeaders converts the provider's `headers` map and rejects the
+// headers the HTTP client would never send.
+func providerHeaders(raw map[string]any) (map[string]string, error) {
+	headers := make(map[string]string, len(raw))
+	for name, value := range raw {
+		if unsendableHeaders[http.CanonicalHeaderKey(name)] {
+			return nil, fmt.Errorf("headers: %q cannot be set; the HTTP client derives it from the request", name)
+		}
+		headers[name] = value.(string)
+	}
+	return headers, nil
 }
 
 // parseCompositeID parses a composite ID in the format "id1:id2" and returns
