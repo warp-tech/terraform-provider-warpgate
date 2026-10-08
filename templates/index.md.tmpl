@@ -91,4 +91,20 @@ resource "warpgate_target_role" "developers_web_access" {
 
 The Warpgate provider offers a way to authenticate with the Warpgate API using a token. This token can be provided in the provider configuration or via the environment variable `WARPGATE_TOKEN`.
 
+### Behind an access proxy
+
+When Warpgate's admin API sits behind an access proxy that wants its own credentials, such as a Cloudflare Access service token, pass them with `headers`. They are sent with every request, in addition to the Warpgate token.
+
+```terraform
+provider "warpgate" {
+  host  = "https://warpgate.example.com"
+  token = var.warpgate_token
+
+  headers = {
+    "CF-Access-Client-Id"     = var.cf_access_client_id
+    "CF-Access-Client-Secret" = var.cf_access_client_secret
+  }
+}
+```
+
 {{ .SchemaMarkdown | trimspace }}

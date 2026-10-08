@@ -37,6 +37,13 @@ func New(version string) func() *schema.Provider {
 					DefaultFunc: schema.EnvDefaultFunc("WARPGATE_TOKEN", nil),
 					Description: "API token for authenticating with Warpgate API",
 				},
+				"headers": {
+					Type:        schema.TypeMap,
+					Optional:    true,
+					Sensitive:   true,
+					Elem:        &schema.Schema{Type: schema.TypeString},
+					Description: "Additional HTTP headers sent with every API request, for example the service token headers of an access proxy in front of Warpgate. They cannot override the `X-Warpgate-Token`, `Content-Type` and `Accept` headers the provider sets.",
+				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
 				"warpgate_role":                  resourceRole(),
@@ -86,6 +93,11 @@ func configure() func(context.Context, *schema.ResourceData) (any, diag.Diagnost
 		token := d.Get("token").(string)
 		insecureSkipVerify := d.Get("insecure_skip_verify").(bool)
 
+		headers := map[string]string{}
+		for name, value := range d.Get("headers").(map[string]any) {
+			headers[name] = value.(string)
+		}
+
 		// Ensure the host has the API path
 		apiPath := "/@warpgate/admin/api"
 		if !strings.Contains(host, apiPath) {
@@ -100,6 +112,7 @@ func configure() func(context.Context, *schema.ResourceData) (any, diag.Diagnost
 			Host:               host,
 			Token:              token,
 			InsecureSkipVerify: insecureSkipVerify,
+			Headers:            headers,
 		}
 
 		c, err := client.NewClient(cfg)

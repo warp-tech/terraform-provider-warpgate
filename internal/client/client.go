@@ -24,12 +24,17 @@ type Config struct {
 	Token              string
 	Timeout            time.Duration
 	InsecureSkipVerify bool
+	// Headers are sent with every request, e.g. the service token headers
+	// of an access proxy in front of Warpgate. They cannot replace the
+	// headers the client sets itself.
+	Headers map[string]string
 }
 
 // Client is a Warpgate API client
 type Client struct {
 	baseURL    *url.URL
 	token      string
+	headers    map[string]string
 	httpClient *http.Client
 }
 
@@ -53,6 +58,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	return &Client{
 		baseURL: baseURL,
 		token:   cfg.Token,
+		headers: cfg.Headers,
 		httpClient: &http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
@@ -111,6 +117,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body any) (
 	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	for name, value := range c.headers {
+		req.Header.Set(name, value)
 	}
 
 	if c.token != "" {
