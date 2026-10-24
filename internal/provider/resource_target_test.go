@@ -536,3 +536,118 @@ func TestSetTargetOptionsKeepsEncryptedSecretsFromState(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildSSHTargetOptionsWithCertificateAuth(t *testing.T) {
+	opts, err := buildSSHTargetOptions(map[string]any{
+		"host":                 "ssh.example.com",
+		"port":                 22,
+		"username":             "deploy",
+		"allow_insecure_algos": false,
+		"certificate_auth": []any{
+			map[string]any{
+				"backend": "openbao",
+				"mount":   "ssh-warpgate",
+				"role":    "deploy",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("buildSSHTargetOptions returned error: %v", err)
+	}
+
+	certAuth, ok := opts.Auth.(*client.SSHTargetCertificateAuth)
+	if !ok {
+		t.Fatalf("expected SSHTargetCertificateAuth, got %T", opts.Auth)
+	}
+	if certAuth.Backend != "openbao" || certAuth.Mount != "ssh-warpgate" || certAuth.Role != "deploy" {
+		t.Fatalf("unexpected certificate auth: %+v", certAuth)
+	}
+
+	body, err := json.Marshal(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"auth":{"kind":"Certificate","backend":"openbao","mount":"ssh-warpgate","role":"deploy"}`) {
+		t.Fatalf("unexpected auth on the wire: %s", body)
+	}
+}
+
+func TestBuildSSHTargetOptionsWithCertificateAuthDefaultsTheMount(t *testing.T) {
+	opts, err := buildSSHTargetOptions(map[string]any{
+		"host":                 "ssh.example.com",
+		"port":                 22,
+		"username":             "deploy",
+		"allow_insecure_algos": false,
+		"certificate_auth": []any{
+			map[string]any{
+				"backend": "openbao",
+				"mount":   "",
+				"role":    "deploy",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("buildSSHTargetOptions returned error: %v", err)
+	}
+
+	if got := opts.Auth.(*client.SSHTargetCertificateAuth).Mount; got != "ssh" {
+		t.Fatalf("expected the ssh mount, got %q", got)
+	}
+}
+
+func TestSetTargetOptionsWithSSHCertificateAuth(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceTarget().Schema, map[string]any{})
+	err := setTargetOptions(d, &client.TargetSSHOptions{
+		Kind:     "Ssh",
+		Host:     "ssh.example.com",
+		Port:     22,
+		Username: "deploy",
+		Auth: &client.SSHTargetCertificateAuth{
+			Kind:    "Certificate",
+			Backend: "openbao",
+			Mount:   "ssh-warpgate",
+			Role:    "deploy",
+		},
+	})
+	if err != nil {
+		t.Fatalf("setTargetOptions returned error: %v", err)
+	}
+
+	for key, want := range map[string]string{
+		"ssh_options.0.certificate_auth.0.backend": "openbao",
+		"ssh_options.0.certificate_auth.0.mount":   "ssh-warpgate",
+		"ssh_options.0.certificate_auth.0.role":    "deploy",
+	} {
+		if got := d.Get(key).(string); got != want {
+			t.Fatalf("%s: expected %q, got %q", key, want, got)
+		}
+	}
+	for _, other := range []string{"password_auth", "public_key_auth", "iam_role_auth"} {
+		if got := d.Get("ssh_options.0." + other).([]any); len(got) != 0 {
+			t.Fatalf("expected no %s block, got %v", other, got)
+		}
+	}
+}
+
+func TestDataSourceTargetReadsSSHCertificateAuth(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, dataSourceTarget().Schema, map[string]any{})
+	err := setTargetOptions(d, &client.TargetSSHOptions{
+		Kind:     "Ssh",
+		Host:     "ssh.example.com",
+		Port:     22,
+		Username: "root",
+		Auth: &client.SSHTargetCertificateAuth{
+			Kind:    "Certificate",
+			Backend: "openbao",
+			Mount:   "ssh",
+			Role:    "root",
+		},
+	})
+	if err != nil {
+		t.Fatalf("setTargetOptions returned error: %v", err)
+	}
+
+	if got := d.Get("ssh_options.0.certificate_auth.0.role").(string); got != "root" {
+		t.Fatalf("expected role root, got %q", got)
+	}
+}

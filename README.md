@@ -20,6 +20,9 @@ This Terraform provider allows you to manage [Warpgate](https://github.com/warp-
 Versions come from the admin API schema published with each Warpgate release tag. 0.29.0 is in
 pre-release; those features ship in 0.29.0-beta.1 and later.
 
+`warpgate_secret_backend` and the `certificate_auth` block of SSH targets need Warpgate 0.30 or
+later; the rest of the provider keeps working with 0.29.
+
 ## Building the Provider
 
 1. Clone the repository:

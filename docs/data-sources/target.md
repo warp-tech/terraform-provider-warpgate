@@ -335,6 +335,7 @@ Read-Only:
 Read-Only:
 
 - `allow_insecure_algos` (Boolean)
+- `certificate_auth` (List of Object) (see [below for nested schema](#nestedobjatt--ssh_options--certificate_auth))
 - `host` (String)
 - `iam_role_auth` (List of Object) (see [below for nested schema](#nestedobjatt--ssh_options--iam_role_auth))
 - `jump_host` (String)
@@ -342,6 +343,16 @@ Read-Only:
 - `port` (Number)
 - `public_key_auth` (List of Object) (see [below for nested schema](#nestedobjatt--ssh_options--public_key_auth))
 - `username` (String)
+
+<a id="nestedobjatt--ssh_options--certificate_auth"></a>
+### Nested Schema for `ssh_options.certificate_auth`
+
+Read-Only:
+
+- `backend` (String)
+- `mount` (String)
+- `role` (String)
+
 
 <a id="nestedobjatt--ssh_options--iam_role_auth"></a>
 ### Nested Schema for `ssh_options.iam_role_auth`

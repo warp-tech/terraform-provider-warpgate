@@ -139,6 +139,30 @@ func dataSourceTarget() *schema.Resource {
 								},
 							},
 						},
+						"certificate_auth": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "Certificate authentication for SSH, signed by a secret backend's SSH CA",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"backend": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Name of the secret backend that signs the certificate",
+									},
+									"mount": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Mount path of the SSH secrets engine",
+									},
+									"role": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "SSH secrets engine role that signs the certificate",
+									},
+								},
+							},
+						},
 						"iam_role_auth": {
 							Type:        schema.TypeList,
 							Computed:    true,

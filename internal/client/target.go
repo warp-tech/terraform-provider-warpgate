@@ -62,6 +62,13 @@ type SSHTargetPublicKeyAuth struct {
 	KeyID string `json:"key_id,omitempty"`
 }
 
+type SSHTargetCertificateAuth struct {
+	Kind    string `json:"kind"`
+	Backend string `json:"backend"`
+	Mount   string `json:"mount"`
+	Role    string `json:"role"`
+}
+
 // SSHTargetIamRoleAuth represents IAM role authentication for SSH targets
 type SSHTargetIamRoleAuth struct {
 	Kind string `json:"kind"`
