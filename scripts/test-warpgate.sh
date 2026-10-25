@@ -14,7 +14,7 @@
 # other platforms build Warpgate and point WARPGATE_BIN at it.
 set -euo pipefail
 
-VERSION="${WARPGATE_VERSION:-0.29.0}"
+VERSION="${WARPGATE_VERSION:-0.30.0}"
 PORT="${WARPGATE_TEST_PORT:-18888}"
 TOKEN="${WARPGATE_TEST_TOKEN:-acctest-admin-token}"
 RUNDIR="${WARPGATE_TEST_DIR:-${TMPDIR:-/tmp}/warpgate-acctest}"

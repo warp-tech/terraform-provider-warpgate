@@ -28,6 +28,18 @@ func otherTargetOptionBlocks(except string) []string {
 	return others
 }
 
+var sshAuthBlocks = []string{"password_auth", "public_key_auth", "certificate_auth", "iam_role_auth"}
+
+func otherSSHAuthBlocks(except string) []string {
+	var others []string
+	for _, block := range sshAuthBlocks {
+		if block != except {
+			others = append(others, "ssh_options.0."+block)
+		}
+	}
+	return others
+}
+
 // resourceTarget creates and returns a schema for the target resource.
 func resourceTarget() *schema.Resource {
 	return &schema.Resource{
@@ -140,7 +152,7 @@ func resourceTarget() *schema.Resource {
 							Type:          schema.TypeList,
 							Optional:      true,
 							MaxItems:      1,
-							ConflictsWith: []string{"ssh_options.0.public_key_auth", "ssh_options.0.iam_role_auth"},
+							ConflictsWith: otherSSHAuthBlocks("password_auth"),
 							Description:   "Password authentication for SSH",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -157,7 +169,7 @@ func resourceTarget() *schema.Resource {
 							Type:          schema.TypeList,
 							Optional:      true,
 							MaxItems:      1,
-							ConflictsWith: []string{"ssh_options.0.password_auth", "ssh_options.0.iam_role_auth"},
+							ConflictsWith: otherSSHAuthBlocks("public_key_auth"),
 							Description:   "Public key authentication for SSH",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -169,11 +181,41 @@ func resourceTarget() *schema.Resource {
 								},
 							},
 						},
+						"certificate_auth": {
+							Type:          schema.TypeList,
+							Optional:      true,
+							MaxItems:      1,
+							ConflictsWith: otherSSHAuthBlocks("certificate_auth"),
+							Description:   "Authenticate with a short-lived OpenSSH certificate that a secret backend's SSH CA signs for each connection (Warpgate 0.30+)",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"backend": {
+										Type:         schema.TypeString,
+										Required:     true,
+										Description:  "Name of the secret backend that signs the certificate",
+										ValidateFunc: validateSecretBackendName,
+									},
+									"mount": {
+										Type:         schema.TypeString,
+										Optional:     true,
+										Default:      "ssh",
+										Description:  "Mount path of the SSH secrets engine",
+										ValidateFunc: validateSecretBackendPathSegment,
+									},
+									"role": {
+										Type:         schema.TypeString,
+										Required:     true,
+										Description:  "SSH secrets engine role that signs the certificate",
+										ValidateFunc: validateSecretBackendPathSegment,
+									},
+								},
+							},
+						},
 						"iam_role_auth": {
 							Type:          schema.TypeList,
 							Optional:      true,
 							MaxItems:      1,
-							ConflictsWith: []string{"ssh_options.0.password_auth", "ssh_options.0.public_key_auth"},
+							ConflictsWith: otherSSHAuthBlocks("iam_role_auth"),
 							Description:   "IAM Role authentication for SSH",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{},
@@ -823,12 +865,26 @@ func buildSSHTargetOptions(opts map[string]any) (*client.TargetSSHOptions, error
 			Kind:  "PublicKey",
 			KeyID: keyID,
 		}
+	} else if v, ok := opts["certificate_auth"]; ok && len(v.([]any)) > 0 {
+		certAuth, _ := v.([]any)[0].(map[string]any)
+		mount, _ := certAuth["mount"].(string)
+		if mount == "" {
+			mount = "ssh"
+		}
+		backend, _ := certAuth["backend"].(string)
+		role, _ := certAuth["role"].(string)
+		auth = &client.SSHTargetCertificateAuth{
+			Kind:    "Certificate",
+			Backend: backend,
+			Mount:   mount,
+			Role:    role,
+		}
 	} else if v, ok := opts["iam_role_auth"]; ok && len(v.([]any)) > 0 {
 		auth = &client.SSHTargetIamRoleAuth{
 			Kind: "IamRole",
 		}
 	} else {
-		return nil, fmt.Errorf("SSH target requires password_auth, public_key_auth, or iam_role_auth")
+		return nil, fmt.Errorf("SSH target requires password_auth, public_key_auth, certificate_auth, or iam_role_auth")
 	}
 
 	return &client.TargetSSHOptions{
@@ -1121,6 +1177,14 @@ func setTargetOptions(d *schema.ResourceData, options any) error {
 				pkAuthMap["key_id"] = keyID
 			}
 			sshOpts["public_key_auth"] = []any{pkAuthMap}
+		case "Certificate":
+			sshOpts["certificate_auth"] = []any{
+				map[string]any{
+					"backend": auth["backend"],
+					"mount":   auth["mount"],
+					"role":    auth["role"],
+				},
+			}
 		case "IamRole":
 			sshOpts["iam_role_auth"] = []any{
 				map[string]any{},

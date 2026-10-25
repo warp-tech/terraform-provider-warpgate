@@ -35,6 +35,44 @@ resource "warpgate_target" "web_server" {
 }
 ```
 
+### SSH Target with a Certificate Signed by Vault or OpenBao
+
+Warpgate 0.30 and later can authenticate to an SSH target with a certificate that the SSH secrets engine of a [`warpgate_secret_backend`](secret_backend) signs for each connection. The target trusts the CA (`TrustedUserCAKeys` in `sshd_config`) instead of listing Warpgate's client key in `authorized_keys`.
+
+Each certificate is valid for 5 minutes, names only the target's `username` as principal, and carries the key ID `warpgate:<warpgate username>:<session id>`, which the target's sshd logs.
+
+The signing role must set `allow_user_key_ids = true`: otherwise the server replaces the key ID, and Warpgate refuses a certificate that does not carry the one it asked for. Restrict `allowed_users` to the target usernames the role is meant for, and list the `mount/sign/role` path in the backend's `allowed_paths`.
+
+```hcl
+resource "warpgate_secret_backend" "openbao" {
+  name          = "openbao"
+  backend_type  = "openbao"
+  address       = "https://bao.example.com:8200"
+  allowed_paths = ["ssh-warpgate/sign/deploy"]
+
+  approle_auth {
+    role_id   = var.warpgate_role_id
+    secret_id = var.warpgate_secret_id
+  }
+}
+
+resource "warpgate_target" "app_server" {
+  name = "app-server"
+
+  ssh_options {
+    host     = "10.0.0.2"
+    port     = 22
+    username = "deploy"
+
+    certificate_auth {
+      backend = warpgate_secret_backend.openbao.name
+      mount   = "ssh-warpgate"
+      role    = "deploy"
+    }
+  }
+}
+```
+
 ### HTTP Target
 
 ```hcl
@@ -227,11 +265,15 @@ One of the following option blocks must be specified:
   * `username` - (Required) The SSH username.
   * `allow_insecure_algos` - (Optional) Allow insecure SSH algorithms. Default: `false`.
   * `jump_host` - (Optional) ID of another target to use as an SSH jump host.
-  * `password_auth` - (Optional) Password authentication for SSH. Conflicts with `public_key_auth` and `iam_role_auth`.
+  * `password_auth` - (Optional) Password authentication for SSH. Conflicts with the other `*_auth` blocks.
     * `password` - (Required) The password for SSH authentication.
-  * `public_key_auth` - (Optional) Public key authentication for SSH. Conflicts with `password_auth` and `iam_role_auth`.
+  * `public_key_auth` - (Optional) Public key authentication for SSH. Conflicts with the other `*_auth` blocks.
     * `key_id` - (Optional) Specific stored client key ID (`warpgate_ssh_key.id`) to authenticate with. Omitted uses default keys.
-  * `iam_role_auth` - (Optional) AWS IAM Role authentication for SSH. Conflicts with `password_auth` and `public_key_auth`.
+  * `certificate_auth` - (Optional) Authenticate with a short-lived OpenSSH certificate signed for each connection by the SSH CA of a `warpgate_secret_backend`. Requires Warpgate 0.30 or later. Conflicts with the other `*_auth` blocks.
+    * `backend` - (Required) Name of the secret backend (`warpgate_secret_backend.name`).
+    * `mount` - (Optional) Mount path of the SSH secrets engine. Default: `ssh`.
+    * `role` - (Required) Role of the SSH secrets engine that signs the certificate.
+  * `iam_role_auth` - (Optional) AWS IAM Role authentication for SSH. Conflicts with the other `*_auth` blocks.
 
 * `http_options` - (Optional) HTTP target configuration block.
   * `url` - (Required) The HTTP server URL.
@@ -512,10 +554,24 @@ Required:
 Optional:
 
 - `allow_insecure_algos` (Boolean) Allow insecure SSH algorithms
+- `certificate_auth` (Block List, Max: 1) Authenticate with a short-lived OpenSSH certificate that a secret backend's SSH CA signs for each connection (Warpgate 0.30+) (see [below for nested schema](#nestedblock--ssh_options--certificate_auth))
 - `iam_role_auth` (Block List, Max: 1) IAM Role authentication for SSH (see [below for nested schema](#nestedblock--ssh_options--iam_role_auth))
 - `jump_host` (String) ID of another target to use as an SSH jump host
 - `password_auth` (Block List, Max: 1) Password authentication for SSH (see [below for nested schema](#nestedblock--ssh_options--password_auth))
 - `public_key_auth` (Block List, Max: 1) Public key authentication for SSH (see [below for nested schema](#nestedblock--ssh_options--public_key_auth))
+
+<a id="nestedblock--ssh_options--certificate_auth"></a>
+### Nested Schema for `ssh_options.certificate_auth`
+
+Required:
+
+- `backend` (String) Name of the secret backend that signs the certificate
+- `role` (String) SSH secrets engine role that signs the certificate
+
+Optional:
+
+- `mount` (String) Mount path of the SSH secrets engine
+
 
 <a id="nestedblock--ssh_options--iam_role_auth"></a>
 ### Nested Schema for `ssh_options.iam_role_auth`
