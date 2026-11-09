@@ -3,6 +3,7 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -374,5 +375,285 @@ func TestCredentialPolicyRoundTripCoversEveryProtocol(t *testing.T) {
 func TestValidateCredentialPolicyAcceptsAnUnreadComputedBlock(t *testing.T) {
 	if err := validateCredentialPolicy("credential_policy", []any{nil}); err != nil {
 		t.Fatalf("expected an unread computed block to pass validation, got %v", err)
+	}
+}
+
+func TestExpandRecordingsStorageAzureCredentialModes(t *testing.T) {
+	for _, tc := range []struct {
+		block string
+		value map[string]any
+		want  client.AzureCredentials
+	}{
+		{"managed_identity", nil, client.AzureCredentials{Mode: "ManagedIdentity"}},
+		{"managed_identity", map[string]any{"client_id": "id"}, client.AzureCredentials{Mode: "ManagedIdentity", ClientID: stringPtr("id")}},
+		{"workload_identity", nil, client.AzureCredentials{Mode: "WorkloadIdentity"}},
+		{
+			"service_principal",
+			map[string]any{"tenant_id": "t", "client_id": "c", "client_secret": "shhh"},
+			client.AzureCredentials{Mode: "ServicePrincipal", TenantID: stringPtr("t"), ClientID: stringPtr("c"), ClientSecret: stringPtr("shhh")},
+		},
+		// client_secret is required by the API; "" tells Warpgate to keep the stored one.
+		{
+			"service_principal",
+			map[string]any{"tenant_id": "t", "client_id": "c"},
+			client.AzureCredentials{Mode: "ServicePrincipal", TenantID: stringPtr("t"), ClientID: stringPtr("c"), ClientSecret: stringPtr("")},
+		},
+		{"developer_tools", nil, client.AzureCredentials{Mode: "DeveloperTools"}},
+	} {
+		t.Run(tc.want.Mode, func(t *testing.T) {
+			var element any
+			if tc.value != nil {
+				element = tc.value
+			}
+
+			cfg := buildRecordingsStorage(map[string]any{
+				"azure": []any{
+					map[string]any{
+						"account":   "acct",
+						"container": "recordings",
+						"prefix":    "",
+						tc.block:    []any{element},
+					},
+				},
+			})
+			if cfg == nil || cfg.Kind != "Azure" {
+				t.Fatalf("expected an Azure config, got %+v", cfg)
+			}
+
+			if stringValue(cfg.Account) != "acct" || stringValue(cfg.Container) != "recordings" {
+				t.Fatalf("expected account and container, got %+v", cfg)
+			}
+
+			// prefix is required by the API, so "" must be sent.
+			if cfg.Prefix == nil || *cfg.Prefix != "" {
+				t.Fatalf("expected an empty prefix to be sent, got %v", cfg.Prefix)
+			}
+
+			if cfg.Endpoint != nil || cfg.Bucket != nil || cfg.Credentials != nil || cfg.Path != nil {
+				t.Fatalf("expected no other backend's fields, got %+v", cfg)
+			}
+
+			got := cfg.AzureCredentials
+			if got == nil {
+				t.Fatal("expected Azure credentials")
+			}
+
+			for name, pair := range map[string][2]*string{
+				"tenant_id":     {got.TenantID, tc.want.TenantID},
+				"client_id":     {got.ClientID, tc.want.ClientID},
+				"client_secret": {got.ClientSecret, tc.want.ClientSecret},
+			} {
+				if (pair[0] == nil) != (pair[1] == nil) || stringValue(pair[0]) != stringValue(pair[1]) {
+					t.Fatalf("%s: got %v, want %v", name, pair[0], pair[1])
+				}
+			}
+
+			if got.Mode != tc.want.Mode {
+				t.Fatalf("expected mode %q, got %q", tc.want.Mode, got.Mode)
+			}
+		})
+	}
+}
+
+func TestFlattenRecordingsStorageAzureCredentialModes(t *testing.T) {
+	for _, tc := range []struct {
+		creds client.AzureCredentials
+		block string
+		want  map[string]any
+	}{
+		{client.AzureCredentials{Mode: "ManagedIdentity", ClientID: stringPtr("id")}, "managed_identity", map[string]any{"client_id": "id"}},
+		{client.AzureCredentials{Mode: "WorkloadIdentity"}, "workload_identity", map[string]any{}},
+		{client.AzureCredentials{Mode: "DeveloperTools"}, "developer_tools", map[string]any{}},
+		{
+			client.AzureCredentials{Mode: "ServicePrincipal", TenantID: stringPtr("t"), ClientID: stringPtr("c"), ClientSecret: stringPtr("")},
+			"service_principal",
+			map[string]any{"tenant_id": "t", "client_id": "c", "client_secret": ""},
+		},
+	} {
+		t.Run(tc.creds.Mode, func(t *testing.T) {
+			d := schema.TestResourceDataRaw(t, resourceParameters().Schema, map[string]any{})
+
+			got := flattenRecordingsStorage(d, client.RecordingsStorageConfig{
+				Kind:                 "Azure",
+				Account:              stringPtr("acct"),
+				Container:            stringPtr("recordings"),
+				Prefix:               stringPtr("sessions/"),
+				ServeThroughWarpgate: boolPtr(true),
+				AzureCredentials:     &tc.creds,
+			})
+
+			storage := got[0].(map[string]any)
+			if _, ok := storage["s3"]; ok {
+				t.Fatalf("expected no s3 block on an Azure config, got %+v", storage)
+			}
+
+			azure := storage["azure"].([]any)[0].(map[string]any)
+			if azure["account"] != "acct" || azure["container"] != "recordings" || azure["prefix"] != "sessions/" || azure["serve_through_warpgate"] != true {
+				t.Fatalf("unexpected azure block %+v", azure)
+			}
+
+			block, ok := azure[tc.block].([]any)
+			if !ok || len(block) != 1 {
+				t.Fatalf("expected one %s block, got %+v", tc.block, azure)
+			}
+
+			for k, v := range tc.want {
+				if block[0].(map[string]any)[k] != v {
+					t.Fatalf("%s.%s: got %v, want %v", tc.block, k, block[0].(map[string]any)[k], v)
+				}
+			}
+
+			if diags := validateParameters(t, []any{map[string]any{"azure": []any{azure}}}); diags.HasError() {
+				t.Fatalf("expected the flattened block to validate, got %+v", diags)
+			}
+		})
+	}
+}
+
+func TestFlattenRecordingsStorageKeepsSecretsFromState(t *testing.T) {
+	// The API redacts secrets to "" (or omits them, on older servers); either
+	// way a read that echoed the response would wipe them from state.
+	for _, redacted := range []*string{nil, stringPtr("")} {
+		s3 := schema.TestResourceDataRaw(t, resourceParameters().Schema, map[string]any{
+			"recordings_storage": []any{map[string]any{"s3": []any{map[string]any{
+				"bucket": "b",
+				"region": "r",
+				"static_credentials": []any{map[string]any{
+					"access_key_id":     "AKIA",
+					"secret_access_key": "shhh",
+				}},
+			}}}},
+		})
+
+		got := flattenRecordingsStorage(s3, client.RecordingsStorageConfig{
+			Kind:        "S3",
+			Credentials: &client.S3Credentials{Mode: "Static", AccessKeyID: stringPtr("AKIA"), SecretAccessKey: redacted},
+		})
+		static := got[0].(map[string]any)["s3"].([]any)[0].(map[string]any)["static_credentials"].([]any)[0].(map[string]any)
+		if static["secret_access_key"] != "shhh" {
+			t.Fatalf("S3 (redacted=%v): expected the stored secret, got %v", redacted, static["secret_access_key"])
+		}
+
+		azure := schema.TestResourceDataRaw(t, resourceParameters().Schema, map[string]any{
+			"recordings_storage": []any{map[string]any{"azure": []any{map[string]any{
+				"account":   "acct",
+				"container": "c",
+				"service_principal": []any{map[string]any{
+					"tenant_id":     "t",
+					"client_id":     "c",
+					"client_secret": "shhh",
+				}},
+			}}}},
+		})
+
+		got = flattenRecordingsStorage(azure, client.RecordingsStorageConfig{
+			Kind: "Azure",
+			AzureCredentials: &client.AzureCredentials{
+				Mode:         "ServicePrincipal",
+				TenantID:     stringPtr("t"),
+				ClientID:     stringPtr("c"),
+				ClientSecret: redacted,
+			},
+		})
+		principal := got[0].(map[string]any)["azure"].([]any)[0].(map[string]any)["service_principal"].([]any)[0].(map[string]any)
+		if principal["client_secret"] != "shhh" {
+			t.Fatalf("Azure (redacted=%v): expected the stored secret, got %v", redacted, principal["client_secret"])
+		}
+	}
+}
+
+// storageResourceData builds ResourceData whose raw config carries the
+// backend block, which TestResourceDataRaw leaves null.
+func storageResourceData(t *testing.T, backend string, serve cty.Value) *schema.ResourceData {
+	t.Helper()
+
+	attrs := map[string]string{
+		"recordings_storage.#":                                      "1",
+		"recordings_storage.0." + backend + ".#":                    "1",
+		"recordings_storage.0." + backend + ".0.prefix":             "",
+		"recordings_storage.0." + backend + ".0.bucket":             "b",
+		"recordings_storage.0." + backend + ".0.region":             "r",
+		"recordings_storage.0." + backend + ".0.account":            "acct",
+		"recordings_storage.0." + backend + ".0.container":          "c",
+		"recordings_storage.0." + backend + ".0.auto_credentials.#": "1",
+		"recordings_storage.0." + backend + ".0.developer_tools.#":  "1",
+	}
+
+	block := map[string]cty.Value{}
+	if !serve.IsNull() {
+		block["serve_through_warpgate"] = serve
+	}
+
+	return resourceParameters().Data(&terraform.InstanceState{
+		ID:         "parameters",
+		Attributes: attrs,
+		RawConfig: cty.ObjectVal(map[string]cty.Value{
+			"recordings_storage": cty.ListVal([]cty.Value{cty.ObjectVal(map[string]cty.Value{
+				backend: cty.ListVal([]cty.Value{cty.ObjectVal(block)}),
+			})}),
+		}),
+	})
+}
+
+func TestExpandRecordingsStorageServeThroughWarpgate(t *testing.T) {
+	for _, backend := range []string{"s3", "azure"} {
+		// Unset must not be sent: the server default differs per backend.
+		if cfg := expandRecordingsStorage(storageResourceData(t, backend, cty.NullVal(cty.Bool))); cfg == nil || cfg.ServeThroughWarpgate != nil {
+			t.Fatalf("%s: expected serve_through_warpgate to be omitted, got %+v", backend, cfg)
+		}
+
+		for _, want := range []bool{true, false} {
+			cfg := expandRecordingsStorage(storageResourceData(t, backend, cty.BoolVal(want)))
+			if cfg == nil || cfg.ServeThroughWarpgate == nil || *cfg.ServeThroughWarpgate != want {
+				t.Fatalf("%s: expected serve_through_warpgate %v, got %+v", backend, want, cfg)
+			}
+		}
+	}
+}
+
+func TestValidateRecordingsStorageRejectsAzureWithAnotherBackend(t *testing.T) {
+	azure := []any{map[string]any{
+		"account":         "acct",
+		"container":       "c",
+		"developer_tools": []any{map[string]any{}},
+	}}
+
+	for name, other := range map[string]any{
+		"disk": []any{map[string]any{"path": "/rec"}},
+		"s3": []any{map[string]any{
+			"bucket":           "b",
+			"region":           "r",
+			"auto_credentials": []any{map[string]any{}},
+		}},
+	} {
+		if diags := validateParameters(t, []any{map[string]any{"azure": azure, name: other}}); !diags.HasError() {
+			t.Fatalf("expected an error for both azure and %s", name)
+		}
+	}
+
+	if diags := validateParameters(t, []any{map[string]any{"azure": azure}}); diags.HasError() {
+		t.Fatalf("expected an azure-only config to validate, got %+v", diags)
+	}
+}
+
+func TestValidateAzureRequiresExactlyOneCredentialsMode(t *testing.T) {
+	azure := func(creds map[string]any) []any {
+		block := map[string]any{"account": "acct", "container": "c"}
+		for k, v := range creds {
+			block[k] = v
+		}
+
+		return []any{map[string]any{"azure": []any{block}}}
+	}
+
+	if diags := validateParameters(t, azure(nil)); !diags.HasError() {
+		t.Fatal("expected an error for an azure block with no credentials")
+	}
+
+	if diags := validateParameters(t, azure(map[string]any{
+		"workload_identity": []any{map[string]any{}},
+		"developer_tools":   []any{map[string]any{}},
+	})); !diags.HasError() {
+		t.Fatal("expected an error for two credential modes")
 	}
 }

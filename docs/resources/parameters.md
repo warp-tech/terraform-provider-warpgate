@@ -108,6 +108,32 @@ resource "warpgate_parameters" "main" {
 }
 ```
 
+Recordings on Azure Blob Storage:
+
+```hcl
+resource "warpgate_parameters" "main" {
+  allow_own_credential_management = true
+
+  recordings_enable = true
+  recordings_storage {
+    azure {
+      account   = "warpgaterecordings"
+      container = "recordings"
+      prefix    = "sessions/"
+
+      service_principal {
+        tenant_id     = var.azure_tenant_id
+        client_id     = var.azure_client_id
+        client_secret = var.azure_client_secret
+      }
+
+      # Or, on a VM or AKS node with a managed identity:
+      # managed_identity {}
+    }
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -157,7 +183,7 @@ The following arguments are supported:
 * `admin_approval_timeout_seconds` - (Optional) How long a session held for administrator approval waits before it is rejected, in seconds. Must be at least 1; unset uses the login timeout.
 * `admin_approval_grace_period_seconds` - (Optional) How long a remembered administrator approval stays valid, in seconds. Must be at least 1; unset means approvals are not remembered.
 * `recordings_enable` - (Optional) Record sessions.
-* `recordings_storage` - (Optional) Where session recordings are stored. Exactly one of the `disk` or `s3` blocks.
+* `recordings_storage` - (Optional) Where session recordings are stored. Exactly one of the `disk`, `s3` or `azure` blocks.
   * `disk` - Local filesystem storage.
     * `path` - (Required) Directory recordings are written to.
   * `s3` - S3 or S3-compatible object storage.
@@ -166,12 +192,29 @@ The following arguments are supported:
     * `endpoint` - (Optional) Custom endpoint for S3-compatible services. Empty means AWS.
     * `path_style` - (Optional) Path-style addressing, required by most S3-compatible services.
     * `prefix` - (Optional) Key prefix prepended to every object path.
+    * `serve_through_warpgate` - (Optional) Stream recordings through Warpgate instead of redirecting the browser to a presigned URL. Needed when the browser cannot reach the bucket. Unset keeps the Warpgate default, `false`.
     * `auto_credentials` - Authenticate with the ambient AWS credential chain. Exactly one of `auto_credentials` or `static_credentials` is required.
     * `static_credentials` - Authenticate with an explicit key pair. Exactly one of `auto_credentials` or `static_credentials` is required.
       * `access_key_id` - (Required) Access key ID.
       * `secret_access_key` - (Optional) Secret access key. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.
+  * `azure` - Azure Blob Storage. Exactly one of `managed_identity`, `workload_identity`, `service_principal` or `developer_tools` is required.
+    * `account` - (Required) Storage account name.
+    * `container` - (Required) Blob container name.
+    * `endpoint` - (Optional) Custom blob service endpoint, e.g. for sovereign clouds or Azurite. Empty means the public Azure endpoint of the account.
+    * `prefix` - (Optional) Blob name prefix prepended to every object path. Defaults to `""`.
+    * `serve_through_warpgate` - (Optional) Stream recordings through Warpgate instead of redirecting the browser to a SAS URL. Redirecting needs a CORS policy on the container and a storage account the browser can reach. Unset keeps the Warpgate default, `true`.
+    * `managed_identity` - Authenticate with a managed identity.
+      * `client_id` - (Optional) Client ID of a user-assigned identity. Empty means the system-assigned identity.
+    * `workload_identity` - Authenticate with workload identity federation, configured through the environment.
+    * `service_principal` - Authenticate with a service principal and client secret.
+      * `tenant_id` - (Required) Entra ID tenant ID.
+      * `client_id` - (Required) Application (client) ID.
+      * `client_secret` - (Optional) Client secret. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.
+    * `developer_tools` - Authenticate with local developer tool credentials such as the Azure CLI.
 
 ~> **Note** `recordings_enable` and `recordings_storage` require Warpgate 0.27 or newer, where recording storage moved out of `warpgate.yaml` into the database.
+
+~> **Note** The `azure` block and `serve_through_warpgate` require a Warpgate release with Azure Blob Storage recordings support ([warp-tech/warpgate#2678](https://github.com/warp-tech/warpgate/pull/2678)). Older servers reject them.
 
 ~> **Note** `open_targets_in_new_tab` requires Warpgate 0.28 or newer.
 
@@ -296,8 +339,57 @@ Optional:
 
 Optional:
 
+- `azure` (Block List, Max: 1) Azure Blob Storage (see [below for nested schema](#nestedblock--recordings_storage--azure))
 - `disk` (Block List, Max: 1) Local filesystem storage (see [below for nested schema](#nestedblock--recordings_storage--disk))
 - `s3` (Block List, Max: 1) S3 or S3-compatible object storage (see [below for nested schema](#nestedblock--recordings_storage--s3))
+
+<a id="nestedblock--recordings_storage--azure"></a>
+### Nested Schema for `recordings_storage.azure`
+
+Required:
+
+- `account` (String) Storage account name
+- `container` (String) Blob container name
+
+Optional:
+
+- `developer_tools` (Block List, Max: 1) Authenticate with local developer tool credentials such as the Azure CLI (see [below for nested schema](#nestedblock--recordings_storage--azure--developer_tools))
+- `endpoint` (String) Custom blob service endpoint, e.g. for sovereign clouds or Azurite. Empty means the public Azure endpoint of the account.
+- `managed_identity` (Block List, Max: 1) Authenticate with a managed identity (see [below for nested schema](#nestedblock--recordings_storage--azure--managed_identity))
+- `prefix` (String) Blob name prefix prepended to every object path
+- `serve_through_warpgate` (Boolean) Stream recordings through Warpgate instead of redirecting the browser to a SAS URL. Warpgate defaults to true
+- `service_principal` (Block List, Max: 1) Authenticate with a service principal and client secret (see [below for nested schema](#nestedblock--recordings_storage--azure--service_principal))
+- `workload_identity` (Block List, Max: 1) Authenticate with workload identity federation, configured through the environment (see [below for nested schema](#nestedblock--recordings_storage--azure--workload_identity))
+
+<a id="nestedblock--recordings_storage--azure--developer_tools"></a>
+### Nested Schema for `recordings_storage.azure.developer_tools`
+
+
+<a id="nestedblock--recordings_storage--azure--managed_identity"></a>
+### Nested Schema for `recordings_storage.azure.managed_identity`
+
+Optional:
+
+- `client_id` (String) Client ID of a user-assigned identity. Empty means the system-assigned identity.
+
+
+<a id="nestedblock--recordings_storage--azure--service_principal"></a>
+### Nested Schema for `recordings_storage.azure.service_principal`
+
+Required:
+
+- `client_id` (String) Application (client) ID
+- `tenant_id` (String) Entra ID tenant ID
+
+Optional:
+
+- `client_secret` (String, Sensitive) Client secret. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.
+
+
+<a id="nestedblock--recordings_storage--azure--workload_identity"></a>
+### Nested Schema for `recordings_storage.azure.workload_identity`
+
+
 
 <a id="nestedblock--recordings_storage--disk"></a>
 ### Nested Schema for `recordings_storage.disk`
@@ -321,6 +413,7 @@ Optional:
 - `endpoint` (String) Custom endpoint for S3-compatible services. Empty means AWS.
 - `path_style` (Boolean) Path-style addressing, required by most S3-compatible services
 - `prefix` (String) Key prefix prepended to every object path
+- `serve_through_warpgate` (Boolean) Stream recordings through Warpgate instead of redirecting the browser to a presigned URL. Warpgate defaults to false
 - `static_credentials` (Block List, Max: 1) Authenticate with an explicit key pair (see [below for nested schema](#nestedblock--recordings_storage--s3--static_credentials))
 
 <a id="nestedblock--recordings_storage--s3--auto_credentials"></a>
