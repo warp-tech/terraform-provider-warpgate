@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -251,6 +252,7 @@ func resourceParameters() *schema.Resource {
 							ExactlyOneOf: []string{
 								"recordings_storage.0.disk",
 								"recordings_storage.0.s3",
+								"recordings_storage.0.azure",
 							},
 							Description: "Local filesystem storage",
 							Elem: &schema.Resource{
@@ -270,6 +272,7 @@ func resourceParameters() *schema.Resource {
 							ExactlyOneOf: []string{
 								"recordings_storage.0.disk",
 								"recordings_storage.0.s3",
+								"recordings_storage.0.azure",
 							},
 							Description: "S3 or S3-compatible object storage",
 							Elem: &schema.Resource{
@@ -299,6 +302,12 @@ func resourceParameters() *schema.Resource {
 										Optional:    true,
 										Description: "Key prefix prepended to every object path",
 									},
+									// Computed: the default differs per backend, and an
+									// Optional-only bool would send false and flip Azure
+									// (default true) over to redirects.
+									"serve_through_warpgate": optionalComputedBoolParameter(
+										"Stream recordings through Warpgate instead of redirecting the browser to a presigned URL. Warpgate defaults to false",
+									),
 									"auto_credentials": {
 										Type:     schema.TypeList,
 										Optional: true,
@@ -340,6 +349,111 @@ func resourceParameters() *schema.Resource {
 								},
 							},
 						},
+						"azure": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							ExactlyOneOf: []string{
+								"recordings_storage.0.disk",
+								"recordings_storage.0.s3",
+								"recordings_storage.0.azure",
+							},
+							Description: "Azure Blob Storage",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"account": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Storage account name",
+									},
+									"container": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Blob container name",
+									},
+									"endpoint": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "Custom blob service endpoint, e.g. for sovereign clouds or Azurite. Empty means the public Azure endpoint of the account.",
+									},
+									"prefix": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Default:     "",
+										Description: "Blob name prefix prepended to every object path",
+									},
+									// Computed: the default differs per backend, and an
+									// Optional-only bool would send false and flip Azure
+									// (default true) over to redirects.
+									"serve_through_warpgate": optionalComputedBoolParameter(
+										"Stream recordings through Warpgate instead of redirecting the browser to a SAS URL. Warpgate defaults to true",
+									),
+									"managed_identity": {
+										Type:         schema.TypeList,
+										Optional:     true,
+										MaxItems:     1,
+										ExactlyOneOf: azureCredentialBlocks,
+										Description:  "Authenticate with a managed identity",
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"client_id": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Client ID of a user-assigned identity. Empty means the system-assigned identity.",
+												},
+											},
+										},
+									},
+									"workload_identity": {
+										Type:         schema.TypeList,
+										Optional:     true,
+										MaxItems:     1,
+										ExactlyOneOf: azureCredentialBlocks,
+										Description:  "Authenticate with workload identity federation, configured through the environment",
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{},
+										},
+									},
+									"service_principal": {
+										Type:         schema.TypeList,
+										Optional:     true,
+										MaxItems:     1,
+										ExactlyOneOf: azureCredentialBlocks,
+										Description:  "Authenticate with a service principal and client secret",
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"tenant_id": {
+													Type:        schema.TypeString,
+													Required:    true,
+													Description: "Entra ID tenant ID",
+												},
+												"client_id": {
+													Type:        schema.TypeString,
+													Required:    true,
+													Description: "Application (client) ID",
+												},
+												"client_secret": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Sensitive:   true,
+													Description: "Client secret. The API never returns it, so it is carried over from configuration on read; omit to keep the secret already stored in Warpgate.",
+												},
+											},
+										},
+									},
+									"developer_tools": {
+										Type:         schema.TypeList,
+										Optional:     true,
+										MaxItems:     1,
+										ExactlyOneOf: azureCredentialBlocks,
+										Description:  "Authenticate with local developer tool credentials such as the Azure CLI",
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -355,6 +469,13 @@ func resourceParameters() *schema.Resource {
 			),
 		},
 	}
+}
+
+var azureCredentialBlocks = []string{
+	"recordings_storage.0.azure.0.managed_identity",
+	"recordings_storage.0.azure.0.workload_identity",
+	"recordings_storage.0.azure.0.service_principal",
+	"recordings_storage.0.azure.0.developer_tools",
 }
 
 func optionalComputedBoolParameter(description string) *schema.Schema {
@@ -564,11 +685,12 @@ func flattenRecordingsStorage(d *schema.ResourceData, cfg client.RecordingsStora
 		}
 	case "S3":
 		s3 := map[string]any{
-			"bucket":     stringValue(cfg.Bucket),
-			"region":     stringValue(cfg.Region),
-			"endpoint":   stringValue(cfg.Endpoint),
-			"path_style": boolValue(cfg.PathStyle),
-			"prefix":     stringValue(cfg.Prefix),
+			"bucket":                 stringValue(cfg.Bucket),
+			"region":                 stringValue(cfg.Region),
+			"endpoint":               stringValue(cfg.Endpoint),
+			"path_style":             boolValue(cfg.PathStyle),
+			"prefix":                 stringValue(cfg.Prefix),
+			"serve_through_warpgate": boolValue(cfg.ServeThroughWarpgate),
 		}
 
 		if cfg.Credentials != nil {
@@ -588,6 +710,38 @@ func flattenRecordingsStorage(d *schema.ResourceData, cfg client.RecordingsStora
 		}
 
 		return []any{map[string]any{"s3": []any{s3}}}
+	case "Azure":
+		azure := map[string]any{
+			"account":                stringValue(cfg.Account),
+			"container":              stringValue(cfg.Container),
+			"endpoint":               stringValue(cfg.Endpoint),
+			"prefix":                 stringValue(cfg.Prefix),
+			"serve_through_warpgate": boolValue(cfg.ServeThroughWarpgate),
+		}
+
+		if creds := cfg.AzureCredentials; creds != nil {
+			switch creds.Mode {
+			case "ManagedIdentity":
+				azure["managed_identity"] = []any{
+					map[string]any{"client_id": stringValue(creds.ClientID)},
+				}
+			case "WorkloadIdentity":
+				azure["workload_identity"] = []any{map[string]any{}}
+			case "ServicePrincipal":
+				azure["service_principal"] = []any{
+					map[string]any{
+						"tenant_id": stringValue(creds.TenantID),
+						"client_id": stringValue(creds.ClientID),
+						// Redacted by the API, same as the S3 secret.
+						"client_secret": d.Get("recordings_storage.0.azure.0.service_principal.0.client_secret"),
+					},
+				}
+			case "DeveloperTools":
+				azure["developer_tools"] = []any{map[string]any{}}
+			}
+		}
+
+		return []any{map[string]any{"azure": []any{azure}}}
 	default:
 		return nil
 	}
@@ -603,7 +757,37 @@ func expandRecordingsStorage(d *schema.ResourceData) *client.RecordingsStorageCo
 		return nil
 	}
 
-	return buildRecordingsStorage(raw[0].(map[string]any))
+	cfg := buildRecordingsStorage(raw[0].(map[string]any))
+	if cfg == nil {
+		return nil
+	}
+
+	// Sent only when configured, so the backend's own default applies otherwise.
+	switch cfg.Kind {
+	case "S3":
+		cfg.ServeThroughWarpgate = serveThroughWarpgate(d, "s3")
+	case "Azure":
+		cfg.ServeThroughWarpgate = serveThroughWarpgate(d, "azure")
+	}
+
+	return cfg
+}
+
+// serveThroughWarpgate reads the flag from the raw configuration: being
+// Computed, d.Get cannot tell an unset value from the one read back.
+func serveThroughWarpgate(d *schema.ResourceData, backend string) *bool {
+	path := cty.GetAttrPath("recordings_storage").IndexInt(0).
+		GetAttr(backend).IndexInt(0).
+		GetAttr("serve_through_warpgate")
+
+	value, diags := d.GetRawConfigAt(path)
+	if diags.HasError() || !value.IsKnown() || value.IsNull() || !value.Type().Equals(cty.Bool) {
+		return nil
+	}
+
+	serve := value.True()
+
+	return &serve
 }
 
 func buildRecordingsStorage(storage map[string]any) *client.RecordingsStorageConfig {
@@ -611,6 +795,10 @@ func buildRecordingsStorage(storage map[string]any) *client.RecordingsStorageCon
 		path := blockString(disk, "path")
 
 		return &client.RecordingsStorageConfig{Kind: "Disk", Path: &path}
+	}
+
+	if azure, ok := firstBlock(storage, "azure"); ok {
+		return buildAzureStorage(azure)
 	}
 
 	s3, ok := firstBlock(storage, "s3")
@@ -645,6 +833,57 @@ func buildRecordingsStorage(storage map[string]any) *client.RecordingsStorageCon
 		}
 	} else if autos, ok := s3["auto_credentials"].([]any); ok && len(autos) > 0 {
 		cfg.Credentials = &client.S3Credentials{Mode: "Auto"}
+	}
+
+	return cfg
+}
+
+func buildAzureStorage(azure map[string]any) *client.RecordingsStorageConfig {
+	account := blockString(azure, "account")
+	container := blockString(azure, "container")
+	prefix := blockString(azure, "prefix")
+
+	cfg := &client.RecordingsStorageConfig{
+		Kind:      "Azure",
+		Account:   &account,
+		Container: &container,
+		Prefix:    &prefix,
+	}
+
+	if endpoint := blockString(azure, "endpoint"); endpoint != "" {
+		cfg.Endpoint = &endpoint
+	}
+
+	// Blocks with no set attributes can come back as a nil element, so
+	// presence is the list length rather than firstBlock.
+	present := func(key string) bool {
+		items, ok := azure[key].([]any)
+		return ok && len(items) > 0
+	}
+
+	switch {
+	case present("managed_identity"):
+		cfg.AzureCredentials = &client.AzureCredentials{Mode: "ManagedIdentity"}
+		identity, _ := firstBlock(azure, "managed_identity")
+		if clientID := blockString(identity, "client_id"); clientID != "" {
+			cfg.AzureCredentials.ClientID = &clientID
+		}
+	case present("workload_identity"):
+		cfg.AzureCredentials = &client.AzureCredentials{Mode: "WorkloadIdentity"}
+	case present("service_principal"):
+		principal, _ := firstBlock(azure, "service_principal")
+		tenantID := blockString(principal, "tenant_id")
+		clientID := blockString(principal, "client_id")
+		// Required by the API; a blank secret keeps the one already stored.
+		secret := blockString(principal, "client_secret")
+		cfg.AzureCredentials = &client.AzureCredentials{
+			Mode:         "ServicePrincipal",
+			TenantID:     &tenantID,
+			ClientID:     &clientID,
+			ClientSecret: &secret,
+		}
+	case present("developer_tools"):
+		cfg.AzureCredentials = &client.AzureCredentials{Mode: "DeveloperTools"}
 	}
 
 	return cfg

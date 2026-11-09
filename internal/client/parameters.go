@@ -3,6 +3,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 )
 
@@ -57,30 +58,95 @@ type ParameterValues struct {
 }
 
 // RecordingsStorageConfig is a union discriminated on "kind": Disk carries
-// Path, S3 carries the rest. Pointers rather than omitempty values because
-// path_style and prefix are required for S3 but may be false and "".
+// Path, S3 and Azure carry the rest. Pointers rather than omitempty values
+// because path_style, prefix and serve_through_warpgate may legitimately be
+// false and "".
 type RecordingsStorageConfig struct {
 	Kind string `json:"kind"`
 
 	// Disk
 	Path *string `json:"path,omitempty"`
 
+	// S3 and Azure
+	Endpoint             *string `json:"endpoint,omitempty"`
+	Prefix               *string `json:"prefix,omitempty"`
+	ServeThroughWarpgate *bool   `json:"serve_through_warpgate,omitempty"`
+
 	// S3
 	Bucket      *string        `json:"bucket,omitempty"`
 	Region      *string        `json:"region,omitempty"`
-	Endpoint    *string        `json:"endpoint,omitempty"`
 	PathStyle   *bool          `json:"path_style,omitempty"`
-	Prefix      *string        `json:"prefix,omitempty"`
-	Credentials *S3Credentials `json:"credentials,omitempty"`
+	Credentials *S3Credentials `json:"-"`
+
+	// Azure
+	Account          *string           `json:"account,omitempty"`
+	Container        *string           `json:"container,omitempty"`
+	AzureCredentials *AzureCredentials `json:"-"`
+}
+
+// Both backends send their credentials under the same "credentials" key, so
+// it is (un)marshalled by hand according to Kind.
+type recordingsStorageFields RecordingsStorageConfig
+
+// MarshalJSON writes the credentials of the configured Kind under "credentials".
+func (c RecordingsStorageConfig) MarshalJSON() ([]byte, error) {
+	var credentials any
+	if c.Kind == "Azure" && c.AzureCredentials != nil {
+		credentials = c.AzureCredentials
+	} else if c.Kind == "S3" && c.Credentials != nil {
+		credentials = c.Credentials
+	}
+
+	return json.Marshal(struct {
+		recordingsStorageFields
+		Credentials any `json:"credentials,omitempty"`
+	}{recordingsStorageFields(c), credentials})
+}
+
+// UnmarshalJSON reads "credentials" into the field matching Kind.
+func (c *RecordingsStorageConfig) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		recordingsStorageFields
+		Credentials json.RawMessage `json:"credentials"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	*c = RecordingsStorageConfig(raw.recordingsStorageFields)
+	if len(raw.Credentials) == 0 || string(raw.Credentials) == "null" {
+		return nil
+	}
+
+	switch c.Kind {
+	case "S3":
+		return json.Unmarshal(raw.Credentials, &c.Credentials)
+	case "Azure":
+		return json.Unmarshal(raw.Credentials, &c.AzureCredentials)
+	}
+
+	return nil
 }
 
 // S3Credentials is discriminated on "mode": Auto uses the ambient AWS
 // credential chain, Static an explicit pair. SecretAccessKey is redacted to
-// null on read; sending null keeps the stored secret.
+// "" (null on older servers) on read; sending null or "" keeps the stored
+// secret.
 type S3Credentials struct {
 	Mode            string  `json:"mode"`
 	AccessKeyID     *string `json:"access_key_id,omitempty"`
 	SecretAccessKey *string `json:"secret_access_key,omitempty"`
+}
+
+// AzureCredentials is discriminated on "mode": ManagedIdentity,
+// WorkloadIdentity, ServicePrincipal or DeveloperTools. ClientSecret is
+// required for ServicePrincipal but redacted to "" on read; sending ""
+// keeps the stored secret.
+type AzureCredentials struct {
+	Mode         string  `json:"mode"`
+	TenantID     *string `json:"tenant_id,omitempty"`
+	ClientID     *string `json:"client_id,omitempty"`
+	ClientSecret *string `json:"client_secret,omitempty"`
 }
 
 // PasswordPolicy represents the Warpgate password policy settings.
