@@ -14,6 +14,7 @@ var credentialPolicyProtocols = []string{"http", "ssh", "mysql", "postgres", "ku
 var validCredentialKinds = map[string]bool{
 	"Password":        true,
 	"PublicKey":       true,
+	"Certificate":     true,
 	"Totp":            true,
 	"Sso":             true,
 	"WebUserApproval": true,

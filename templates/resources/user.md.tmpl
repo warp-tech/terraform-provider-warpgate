@@ -79,6 +79,7 @@ The `credential_policy` block supports:
 * `ssh` - (Optional) List of credential types required for SSH access. Valid values: `Password`, `PublicKey`, `Totp`, `Sso`, `WebUserApproval`.
 * `mysql` - (Optional) List of credential types required for MySQL access. Valid values: `Password`, `PublicKey`, `Totp`, `Sso`, `WebUserApproval`.
 * `postgres` - (Optional) List of credential types required for PostgreSQL access. Valid values: `Password`, `PublicKey`, `Totp`, `Sso`, `WebUserApproval`.
+* `kubernetes` - (Optional) List of credential types required for Kubernetes access. Valid values: `Password`, `PublicKey`, `Certificate`, `Totp`, `Sso`, `WebUserApproval`.
 
 ## Attribute Reference
 
