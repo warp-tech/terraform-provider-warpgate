@@ -376,3 +376,17 @@ func TestValidateCredentialPolicyAcceptsAnUnreadComputedBlock(t *testing.T) {
 		t.Fatalf("expected an unread computed block to pass validation, got %v", err)
 	}
 }
+
+// Warpgate's Kubernetes protocol authenticates with client certificates, and an
+// instance default policy such as kubernetes = ["Certificate", "WebUserApproval"]
+// is copied onto every new user. Rejecting the kind made every later plan of such
+// a user fail with "Certificate is not a valid credential kind".
+func TestValidateCredentialPolicyAcceptsCertificate(t *testing.T) {
+	policy := []any{map[string]any{"kubernetes": []any{"Certificate", "WebUserApproval"}}}
+	if err := validateCredentialPolicy("credential_policy", policy); err != nil {
+		t.Fatalf("expected Certificate to be a valid credential kind, got %v", err)
+	}
+	if err := validateCredentialPolicy("credential_policy", []any{map[string]any{"kubernetes": []any{"Bogus"}}}); err == nil {
+		t.Fatal("expected an unknown credential kind to be rejected")
+	}
+}

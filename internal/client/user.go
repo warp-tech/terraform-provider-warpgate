@@ -17,6 +17,8 @@ const (
 	CredentialKindPassword CredentialKind = "Password"
 	// CredentialKindPublicKey represents public key-based authentication
 	CredentialKindPublicKey CredentialKind = "PublicKey"
+	// CredentialKindCertificate represents client certificate authentication (Kubernetes)
+	CredentialKindCertificate CredentialKind = "Certificate"
 	// CredentialKindSso represents single sign-on authentication
 	CredentialKindTotp CredentialKind = "Totp"
 	// CredentialKindSso represents single sign-on authentication
